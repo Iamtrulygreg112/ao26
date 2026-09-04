@@ -3,21 +3,22 @@
 import { useState } from "react";
 import { MEMBERS, POSITIONS, memberName, type Position } from "@/lib/config";
 import { todayISO } from "@/lib/dates";
-import { addWorkEntries, errorText, removeWorkEntry, setPosition } from "@/lib/writes";
+import { addWorkEntry, errorText, removeWorkEntry, setPosition } from "@/lib/writes";
 import type { EventRow, WorkEntryRow } from "@/lib/types";
 import Spinner from "./Spinner";
-import PeoplePicker from "./PeoplePicker";
 
 type Props = { event: EventRow; entries: WorkEntryRow[]; sessionId: string };
 
 export default function WorkedList({ event, entries, sessionId }: Props) {
   const [busy, setBusy] = useState<string | null>(null); // memberId being written
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pickedId, setPickedId] = useState("");
 
   if (event.date > todayISO()) {
     return <p className="text-sm text-muted">You can log this after the event.</p>;
   }
 
+  const mine = entries.some((w) => w.memberId === sessionId);
   const withEntry = new Set(entries.map((w) => w.memberId));
   const available = MEMBERS.filter((m) => !withEntry.has(m.id));
   const sorted = [...entries].sort(
@@ -35,6 +36,8 @@ export default function WorkedList({ event, entries, sessionId }: Props) {
       setBusy(null);
     }
   }
+
+  const add = (memberId: string) => run(memberId, () => addWorkEntry({ eventId: event.id, memberId, createdBy: sessionId }));
 
   return (
     <div className="space-y-4">
@@ -80,12 +83,60 @@ export default function WorkedList({ event, entries, sessionId }: Props) {
 
       {sorted.length === 0 && <p className="text-sm text-muted">Nobody logged yet.</p>}
 
-      <PeoplePicker
-        members={available}
-        sessionId={sessionId}
-        label="Add people who worked"
-        onSubmit={(ids) => addWorkEntries(event.id, ids, sessionId)}
-      />
+      {mine ? (
+        <button type="button" disabled className="h-11 w-full rounded-xl border border-border bg-surface2 px-4 font-medium text-muted">
+          You&apos;re logged ✓
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={() => add(sessionId)}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-azure px-4 font-medium text-white transition active:scale-[0.98] disabled:opacity-60"
+        >
+          {busy === sessionId && <Spinner className="text-white" />}
+          I worked
+        </button>
+      )}
+      {!mine && errors[sessionId] && <p className="text-sm text-danger">{errors[sessionId]}</p>}
+
+      {available.length > 0 && (
+        <div>
+          <label htmlFor="add-worker" className="mb-2 block text-xs uppercase tracking-widest text-muted">Add someone else</label>
+          <div className="flex gap-2">
+            <select
+              id="add-worker"
+              value={pickedId}
+              disabled={busy !== null}
+              onChange={(e) => setPickedId(e.target.value)}
+              className="h-11 min-w-0 flex-1 rounded-xl border border-border bg-surface2 px-4 outline-none focus:border-azure"
+            >
+              <option value="">Choose a name…</option>
+              {available.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={busy !== null || !pickedId}
+              onClick={async () => {
+                const id = pickedId;
+                setPickedId("");
+                await add(id);
+              }}
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface2 px-4 font-medium transition active:scale-[0.98] disabled:opacity-40"
+            >
+              {busy !== null && busy !== sessionId && <Spinner />}
+              Add
+            </button>
+          </div>
+          {Object.entries(errors)
+            .filter(([id, msg]) => msg && !withEntry.has(id) && id !== sessionId)
+            .map(([id, msg]) => (
+              <p key={id} className="mt-1 text-sm text-danger">{memberName(id)}: {msg}</p>
+            ))}
+        </div>
+      )}
 
       <p className="text-sm text-muted">
         Each person here earns <span className="tabular-nums">{event.weight}</span> pt{event.weight === 1 ? "" : "s"}.
