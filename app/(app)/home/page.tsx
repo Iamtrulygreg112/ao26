@@ -46,7 +46,6 @@ export default function HomePage() {
 
   const upcoming = events.filter((e) => isUpcoming(e.date)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
   const worked = (id: string) => workEntries.filter((w) => w.eventId === id).length;
-  const assignedCount = (id: string) => assignments.filter((a) => a.eventId === id && a.status === "assigned").length;
 
   const mineByEvent = new Set(workEntries.filter((w) => w.memberId === me).map((w) => w.eventId));
   const unlogged = events
@@ -117,7 +116,6 @@ export default function HomePage() {
                 key={e.id}
                 event={e}
                 workedCount={worked(e.id)}
-                assignedCount={assignedCount(e.id)}
                 tag={myAssigned.has(e.id) ? "you're on it" : undefined}
               />
             ))}

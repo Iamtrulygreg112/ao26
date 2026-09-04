@@ -10,7 +10,6 @@ import { deleteEvent, updateEvent } from "@/lib/writes";
 import { WeightPill } from "@/components/EventCard";
 import EventForm from "@/components/EventForm";
 import WorkedList from "@/components/WorkedList";
-import Roster from "@/components/Roster";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
 export default function EventDetailPage() {
@@ -32,9 +31,16 @@ export default function EventDetailPage() {
   }
 
   const entries = workEntries.filter((w) => w.eventId === event.id);
+  const full = entries.length >= event.headcount;
 
   return (
     <div className="space-y-8">
+      <Link href="/home" className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-surface2 px-4 font-medium transition active:scale-[0.98]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        Home
+      </Link>
       {editing ? (
         <section className="space-y-4">
           <h1 className="text-2xl font-semibold tracking-tight">Edit event</h1>
@@ -54,7 +60,9 @@ export default function EventDetailPage() {
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
             <span>{formatEventDate(event.date)}</span>
             <WeightPill weight={event.weight} />
-            <span className="tabular-nums">needs {event.headcount}</span>
+            <span className={`font-medium tabular-nums ${full ? "text-azure" : "text-gold"}`}>
+              {entries.length}/{event.headcount} worked
+            </span>
           </div>
           {event.notes && <p className="text-sm text-text">{event.notes}</p>}
           <button type="button" onClick={() => setEditing(true)} className="text-sm text-azure underline-offset-4 hover:underline">
@@ -63,9 +71,7 @@ export default function EventDetailPage() {
         </section>
       )}
 
-      <section>
-        <Roster event={event} sessionId={session?.id ?? ""} />
-      </section>
+      {/* <Roster/> is hidden for now; components/Roster.tsx stays for later. */}
 
       {/* <SuggestionPanel event={event} /> is hidden for now; components/SuggestionPanel.tsx stays for later. */}
 

@@ -6,11 +6,10 @@ import { isPast, isUpcoming } from "@/lib/dates";
 import EventCard from "@/components/EventCard";
 
 export default function EventsPage() {
-  const { events, workEntries, assignments } = useData();
+  const { events, workEntries } = useData();
   const upcoming = events.filter((e) => isUpcoming(e.date)).sort((a, b) => a.date.localeCompare(b.date));
   const past = events.filter((e) => isPast(e.date)).sort((a, b) => b.date.localeCompare(a.date));
   const worked = (id: string) => workEntries.filter((w) => w.eventId === id).length;
-  const assigned = (id: string) => assignments.filter((a) => a.eventId === id && a.status === "assigned").length;
 
   return (
     <div className="space-y-8">
@@ -27,7 +26,7 @@ export default function EventsPage() {
           <p className="text-sm text-muted">No upcoming events</p>
         ) : (
           <div className="space-y-2">
-            {upcoming.map((e) => <EventCard key={e.id} event={e} workedCount={worked(e.id)} assignedCount={assigned(e.id)} />)}
+            {upcoming.map((e) => <EventCard key={e.id} event={e} workedCount={worked(e.id)} />)}
           </div>
         )}
       </section>
@@ -38,7 +37,7 @@ export default function EventsPage() {
           <p className="text-sm text-muted">Nothing yet</p>
         ) : (
           <div className="space-y-2">
-            {past.map((e) => <EventCard key={e.id} event={e} workedCount={worked(e.id)} assignedCount={assigned(e.id)} />)}
+            {past.map((e) => <EventCard key={e.id} event={e} workedCount={worked(e.id)} />)}
           </div>
         )}
       </section>
