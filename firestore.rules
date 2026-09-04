@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function validMember(id) {
+      return id in ['alex','sebastian','adrian','ishaan','husam','garrett','will','aja','landon','matheus','martin','kaden','kyle','hayden','declan','tucker','micah','wyatt','jett','aden','james','tristan','xander','emilio','kyan','berk','gabe','luca','chase'];
+    }
+    match /events/{id} {
+      allow read: if true;
+      allow create, update: if request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && request.resource.data.date is string && request.resource.data.date.size() == 10
+        && request.resource.data.headcount is int && request.resource.data.headcount >= 1
+        && request.resource.data.weight in [1, 2, 3];
+      allow delete: if true;
+    }
+    match /assignments/{id} {
+      allow read, delete: if true;
+      allow create, update: if validMember(request.resource.data.memberId)
+        && request.resource.data.status in ['assigned', 'vetoed']
+        && request.resource.data.source in ['manual', 'suggested', 'cover']
+        && id == request.resource.data.eventId + '_' + request.resource.data.memberId;
+    }
+    match /work_entries/{id} {
+      allow read, delete: if true;
+      allow create, update: if validMember(request.resource.data.memberId)
+        && (request.resource.data.position == null || request.resource.data.position in ['Door', 'Roam', 'Bar', 'Fire Alarm'])
+        && id == request.resource.data.eventId + '_' + request.resource.data.memberId;
+    }
+    match /pins/{memberId} {
+      allow get: if validMember(memberId);
+      allow list: if false;
+      allow create: if validMember(memberId) && request.resource.data.hash is string && request.resource.data.salt is string;
+      allow update, delete: if false;
+    }
+  }
+}
