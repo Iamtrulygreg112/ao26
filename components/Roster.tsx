@@ -116,8 +116,8 @@ export default function Roster({ event, sessionId }: { event: EventRow; sessionI
         <PeoplePicker
           members={addable}
           sessionId={sessionId}
-          label="Add to roster"
-          onSubmit={(ids) => setAssignments(event.id, ids, "manual")}
+          busyId={busy}
+          onPick={(id) => run(id, () => setAssignments(event.id, [id], "manual"))}
         />
       )}
 

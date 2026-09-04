@@ -11,6 +11,15 @@ import { WeightPill } from "@/components/EventCard";
 import EventForm from "@/components/EventForm";
 import WorkedList from "@/components/WorkedList";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import EventMenu from "@/components/EventMenu";
+
+function BackArrow() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +28,7 @@ export default function EventDetailPage() {
   const { events, workEntries } = useData();
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [managing, setManaging] = useState(false);
 
   const event = events.find((e) => e.id === id);
   if (!event) {
@@ -35,12 +45,24 @@ export default function EventDetailPage() {
 
   return (
     <div className="space-y-8">
-      <Link href="/home" className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-surface2 px-4 font-medium transition active:scale-[0.98]">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M15 18l-6-6 6-6" />
-        </svg>
-        Home
-      </Link>
+      {editing || managing ? (
+        <button
+          type="button"
+          onClick={() => {
+            setEditing(false);
+            setManaging(false);
+          }}
+          className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-surface2 px-4 font-medium transition active:scale-[0.98]"
+        >
+          <BackArrow />
+          Back to event
+        </button>
+      ) : (
+        <Link href="/events" className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-surface2 px-4 font-medium transition active:scale-[0.98]">
+          <BackArrow />
+          Events
+        </Link>
+      )}
       {editing ? (
         <section className="space-y-4">
           <h1 className="text-2xl font-semibold tracking-tight">Edit event</h1>
@@ -56,7 +78,12 @@ export default function EventDetailPage() {
         </section>
       ) : (
         <section className="space-y-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{event.name}</h1>
+          <div className="flex items-start gap-3">
+            <h1 className="min-w-0 flex-1 break-words text-2xl font-semibold tracking-tight">{event.name}</h1>
+            <div className="mt-1 shrink-0">
+              <EventMenu onEdit={() => setEditing(true)} onDelete={() => setConfirmDelete(true)} />
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
             <span>{formatEventDate(event.date)}</span>
             <WeightPill weight={event.weight} />
@@ -65,9 +92,6 @@ export default function EventDetailPage() {
             </span>
           </div>
           {event.notes && <p className="text-sm text-text">{event.notes}</p>}
-          <button type="button" onClick={() => setEditing(true)} className="text-sm text-azure underline-offset-4 hover:underline">
-            Edit
-          </button>
         </section>
       )}
 
@@ -76,18 +100,7 @@ export default function EventDetailPage() {
       {/* <SuggestionPanel event={event} /> is hidden for now; components/SuggestionPanel.tsx stays for later. */}
 
       <section>
-        <h2 className="mb-2 text-xs uppercase tracking-widest text-muted">Worked</h2>
-        <WorkedList event={event} entries={entries} sessionId={session?.id ?? ""} />
-      </section>
-
-      <section className="pt-4">
-        <button
-          type="button"
-          onClick={() => setConfirmDelete(true)}
-          className="h-11 w-full rounded-xl border border-danger/30 bg-danger/10 px-4 font-medium text-danger transition active:scale-[0.98]"
-        >
-          Delete event
-        </button>
+        <WorkedList event={event} entries={entries} sessionId={session?.id ?? ""} managing={managing} onManagingChange={setManaging} />
       </section>
 
       {confirmDelete && (
