@@ -32,5 +32,29 @@ service cloud.firestore {
       allow create: if validMember(memberId) && request.resource.data.hash is string && request.resource.data.salt is string;
       allow update, delete: if false;
     }
+    // ---- Admin (Signal bot) ---------------------------------------------------
+    // The Pi bot writes signal_* with a service account, which bypasses these
+    // rules; `write: if false` there is intentional. Only the admin's Google
+    // account (Firebase Auth) can read them or touch the send queue.
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'chasescron@gmail.com';
+    }
+    match /signal_groups/{id}   { allow read: if isAdmin(); allow write: if false; }
+    match /signal_messages/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /signal_meta/{id}     { allow read: if isAdmin(); allow write: if false; }
+    match /scheduled_sends/{id} {
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdBy == 'chase'
+        && request.resource.data.groupId is string
+        && request.resource.data.sendAt is string
+        && request.resource.data.text is string && request.resource.data.text.size() <= 2000
+        && request.resource.data.photoCount is int && request.resource.data.photoCount <= 6;
+      allow update: if isAdmin()
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'cancelled';
+      match /photos/{n} { allow read, write: if isAdmin(); }
+    }
   }
 }

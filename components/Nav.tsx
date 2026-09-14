@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { TITLE } from "@/lib/config";
-import { clearSession } from "@/lib/session";
+import { clearSession, getSession } from "@/lib/session";
 
-type Tab = { href: "/home" | "/events" | "/standings"; label: string; icon: React.ReactNode };
+type Tab = { href: "/home" | "/events" | "/standings" | "/admin"; label: string; icon: React.ReactNode };
 
 const ICON = {
   width: 22,
@@ -51,6 +51,19 @@ const TABS: Tab[] = [
   },
 ];
 
+// Owner-only. This only hides the tab; the /admin layout gate and the
+// Firestore rules are the real protection.
+const ADMIN_TAB: Tab = {
+  href: "/admin",
+  label: "Admin",
+  icon: (
+    <svg {...ICON}>
+      <path d="M12 3l8 3v6c0 4.6-3.4 8.4-8 9-4.6-.6-8-4.4-8-9V6l8-3z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
+};
+
 export default function Nav({ name }: { name: string }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -61,6 +74,7 @@ export default function Nav({ name }: { name: string }) {
   }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const tabs = getSession()?.id === "chase" ? [...TABS, ADMIN_TAB] : TABS;
 
   return (
     <>
@@ -69,7 +83,7 @@ export default function Nav({ name }: { name: string }) {
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <span className="font-semibold tracking-tight text-gold">{TITLE}</span>
           <nav className="flex gap-1">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <Link
                 key={t.href}
                 href={t.href}
@@ -94,8 +108,8 @@ export default function Nav({ name }: { name: string }) {
 
       {/* Bottom bar, mobile */}
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
-        <div className="grid h-16 grid-cols-3">
-          {TABS.map((t) => (
+        <div className={`grid h-16 ${tabs.length === 4 ? "grid-cols-4" : "grid-cols-3"}`}>
+          {tabs.map((t) => (
             <Link
               key={t.href}
               href={t.href}

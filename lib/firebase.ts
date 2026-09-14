@@ -1,4 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // The Firebase web config is public by design; the Firestore rules are the security.
@@ -36,3 +37,5 @@ function requireConfig(): Record<keyof typeof env, string> {
 const app = getApps().length ? getApp() : initializeApp(requireConfig());
 
 export const db = getFirestore(app);
+// Only the admin gate uses this (Google sign-in); pledges still log in with name + PIN.
+export const auth = getAuth(app);
