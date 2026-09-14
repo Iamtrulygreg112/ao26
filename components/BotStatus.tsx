@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAdminData } from "@/lib/adminData";
+import { useSignalData } from "@/lib/signalData";
 import { formatRelative } from "@/lib/dates";
 
 const ONLINE_WINDOW_MS = 3 * 60 * 1000;
@@ -14,9 +14,12 @@ function Badge({ children, tone = "text-muted" }: { children: React.ReactNode; t
   );
 }
 
-/** Heartbeat pill for the Pi bot. Renders nothing until the status doc exists. */
-export default function BotStatus() {
-  const { status } = useAdminData();
+/**
+ * Heartbeat pill for the Pi bot. Renders nothing until the status doc exists.
+ * `detailed` (the Send page) adds the DRY RUN / ARMED / groups badges.
+ */
+export default function BotStatus({ detailed = false }: { detailed?: boolean }) {
+  const { status } = useSignalData();
   // Re-evaluate "within 3 minutes" without waiting for a new snapshot.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -37,11 +40,11 @@ export default function BotStatus() {
         }`}
       >
         <span className={`h-2 w-2 rounded-full ${online ? "bg-green-500" : "bg-danger"}`} aria-hidden />
-        {online ? "Bot online" : `Bot offline · last seen ${formatRelative(status.lastSeen, now)}`}
+        {online ? (detailed ? "Bot online" : "Live") : `Bot offline · last seen ${formatRelative(status.lastSeen, now)}`}
       </span>
-      {status.dryRun && <Badge>DRY RUN</Badge>}
-      {status.armed && <Badge tone="text-gold">ARMED</Badge>}
-      <Badge>{status.groupsEnabled} groups</Badge>
+      {detailed && status.dryRun && <Badge>DRY RUN</Badge>}
+      {detailed && status.armed && <Badge tone="text-gold">ARMED</Badge>}
+      {detailed && <Badge>{status.groupsEnabled} groups</Badge>}
     </div>
   );
 }

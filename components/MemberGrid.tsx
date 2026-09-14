@@ -1,4 +1,7 @@
+"use client";
+
 import { MEMBERS } from "@/lib/config";
+import { getSession } from "@/lib/session";
 
 const OWNER_ID = "chase";
 
@@ -24,6 +27,7 @@ type Props = {
 export default function MemberGrid({ likedBy, notLikedBy, mode }: Props) {
   const liked = new Set(likedBy);
   const missing = new Set(notLikedBy);
+  const me = getSession()?.id ?? null;
   const shown = mode === "missing" ? TRACKED_MEMBERS.filter((m) => missing.has(m.id)) : TRACKED_MEMBERS;
 
   if (mode === "missing" && shown.length === 0) {
@@ -34,15 +38,16 @@ export default function MemberGrid({ likedBy, notLikedBy, mode }: Props) {
     <ul className="flex flex-wrap gap-1.5" aria-label={mode === "missing" ? "Not yet reacted" : "Reactions"}>
       {shown.map((m) => {
         const hit = liked.has(m.id);
+        const mine = m.id === me;
         return (
           <li
             key={m.id}
             className={`inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium ${
               hit ? "bg-surface2 text-text" : "border border-border text-muted opacity-60"
-            }`}
+            } ${mine ? "ring-2 ring-azure" : ""}`}
           >
             {hit && <ThumbsUp />}
-            {m.name}
+            {mine ? `${m.name} (you)` : m.name}
           </li>
         );
       })}

@@ -1,18 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/useSession";
 import { AdminAuthProvider, useAdmin } from "@/lib/adminAuth";
-import { AdminDataProvider } from "@/lib/adminData";
+import { SendDataProvider } from "@/lib/sendData";
 import BotStatus from "@/components/BotStatus";
 
 const OWNER_ID = "chase";
-
-const SUB_TABS: Array<{ href: "/admin/signal" | "/admin/send"; label: string }> = [
-  { href: "/admin/signal", label: "Signal" },
-  { href: "/admin/send", label: "Send" },
-];
 
 function GoogleMark() {
   return (
@@ -25,8 +18,7 @@ function GoogleMark() {
   );
 }
 
-function AdminShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+function SendShell({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, loading, error, signIn, signOut } = useAdmin();
 
   if (loading) return null;
@@ -35,7 +27,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex justify-center pt-8">
         <div className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-surface p-5 text-center">
-          <h1 className="text-lg font-semibold tracking-tight">Admin — sign in with Google to continue</h1>
+          <h1 className="text-lg font-semibold tracking-tight">Send — sign in with Google to continue</h1>
           <button
             type="button"
             onClick={() => signIn().catch(() => undefined)}
@@ -72,47 +64,31 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const firstName = user.displayName?.split(" ")[0] || user.email || "Admin";
 
   return (
-    <AdminDataProvider key={user.uid}>
+    <SendDataProvider key={user.uid}>
       <div className="space-y-6">
-        <div className="space-y-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
-          <BotStatus />
-        </div>
-
-        <div className="flex items-center justify-between gap-3">
-          <nav className="inline-flex rounded-xl border border-border bg-surface p-1" aria-label="Admin sections">
-            {SUB_TABS.map((t) => {
-              const active = pathname === t.href || pathname.startsWith(t.href + "/");
-              return (
-                <Link
-                  key={t.href}
-                  href={t.href}
-                  className={`flex h-9 items-center rounded-lg px-4 text-sm font-medium transition ${
-                    active ? "bg-surface2 text-text" : "text-muted hover:text-text"
-                  }`}
-                >
-                  {t.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <button type="button" onClick={() => signOut()} className="shrink-0 truncate text-sm text-muted transition hover:text-text">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-3">
+            <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+            <BotStatus detailed />
+          </div>
+          <button type="button" onClick={() => signOut()} className="shrink-0 truncate pt-2 text-sm text-muted transition hover:text-text">
             {firstName} · Sign out
           </button>
         </div>
 
         {children}
       </div>
-    </AdminDataProvider>
+    </SendDataProvider>
   );
 }
 
 /**
  * Gate, in order: (1) the PIN session must be the owner; (2) a Google account
- * must be signed in; (3) it must be the admin email. Nothing admin-related is
- * rendered or subscribed until all three pass.
+ * must be signed in; (3) it must be the admin email. Nothing send-related is
+ * rendered or subscribed until all three pass. The Firebase Auth SDK is only
+ * ever touched past step 1, so no other pledge triggers it.
  */
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function SendLayout({ children }: { children: React.ReactNode }) {
   const { session } = useSession();
 
   if (session?.id !== OWNER_ID) {
@@ -121,7 +97,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminAuthProvider>
-      <AdminShell>{children}</AdminShell>
+      <SendShell>{children}</SendShell>
     </AdminAuthProvider>
   );
 }

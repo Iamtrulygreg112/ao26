@@ -4,7 +4,7 @@
 import { collection, deleteDoc, doc, getDocs, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import { nowISO } from "./dates";
-import type { ScheduledSendDoc, SendPhotoDoc, SendStatus } from "./adminData";
+import type { ScheduledSendDoc, SendPhotoDoc, SendStatus } from "./sendData";
 
 export const MAX_PHOTOS = 6;
 export const MAX_TEXT = 2000;

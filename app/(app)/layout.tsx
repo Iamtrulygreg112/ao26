@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/useSession";
 import { DataProvider } from "@/lib/data";
+import { SignalDataProvider } from "@/lib/signalData";
 import Nav from "@/components/Nav";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +23,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <>
       <Nav name={session.name} />
       <main className="mx-auto max-w-2xl px-4 pb-24 pt-6 md:pt-8">
-        <DataProvider fallback={<p className="pt-16 text-center text-muted">Loading…</p>}>{children}</DataProvider>
+        <SignalDataProvider>
+          <DataProvider fallback={<p className="pt-16 text-center text-muted">Loading…</p>}>{children}</DataProvider>
+        </SignalDataProvider>
       </main>
     </>
   );

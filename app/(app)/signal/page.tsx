@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useAdminData, type SignalMessageRow } from "@/lib/adminData";
+import { useSignalData, type SignalMessageRow } from "@/lib/signalData";
+import { useSession } from "@/lib/useSession";
 import { formatMessageTime } from "@/lib/dates";
 import MemberGrid from "@/components/MemberGrid";
 
@@ -90,13 +91,17 @@ function MessageCard({ m, onlyMissing }: { m: SignalMessageRow; onlyMissing: boo
   );
 }
 
-export default function AdminSignalPage() {
-  const { groups, messages, loaded, error } = useAdminData();
+export default function SignalPage() {
+  const { groups, messages, loaded, error } = useSignalData();
+  const { session } = useSession();
   const [groupId, setGroupId] = useState<string>(ALL);
   const [onlyMissing, setOnlyMissing] = useState(true);
+  const [justMe, setJustMe] = useState(false);
+  const me = session?.id ?? "";
 
   const enabled = groups.filter((g) => g.enabled).sort((a, b) => a.name.localeCompare(b.name));
-  const shown = groupId === ALL ? messages : messages.filter((m) => m.groupId === groupId);
+  const inGroup = groupId === ALL ? messages : messages.filter((m) => m.groupId === groupId);
+  const shown = justMe ? inGroup.filter((m) => (m.notLikedBy ?? []).includes(me)) : inGroup;
 
   return (
     <div className="space-y-4">
@@ -109,14 +114,21 @@ export default function AdminSignalPage() {
         ))}
       </div>
 
-      <Toggle on={onlyMissing} onChange={setOnlyMissing} label="Only show who's missing" />
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <Toggle on={onlyMissing} onChange={setOnlyMissing} label="Only show who's missing" />
+        <Toggle on={justMe} onChange={setJustMe} label="Just me" />
+      </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {!loaded ? (
         <p className="text-sm text-muted">Loading…</p>
       ) : shown.length === 0 ? (
-        <p className="text-sm text-muted">Nothing has hit the threshold yet.</p>
+        justMe ? (
+          <p className="text-sm font-medium text-gold">You&apos;re caught up.</p>
+        ) : (
+          <p className="text-sm text-muted">Nothing has hit the threshold yet.</p>
+        )
       ) : (
         <ul className="space-y-2">
           {shown.map((m) => (

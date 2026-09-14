@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useAdminData, type ScheduledSendRow, type SendPhotoDoc, type SendStatus } from "@/lib/adminData";
+import { useSignalData } from "@/lib/signalData";
+import { useSendData, type ScheduledSendRow, type SendPhotoDoc, type SendStatus } from "@/lib/sendData";
 import { MAX_PHOTOS, MAX_TEXT, cancelSend, deleteSend, loadSendPhotos, scheduleSend } from "@/lib/adminWrites";
 import { compressImage, formatBytes } from "@/lib/photos";
 import { formatDateTime, nowISO } from "@/lib/dates";
@@ -56,7 +57,7 @@ function XIcon({ size = 14 }: { size?: number }) {
 }
 
 function Composer() {
-  const { groups } = useAdminData();
+  const { groups } = useSignalData();
   const enabled = groups.filter((g) => g.enabled).sort((a, b) => a.name.localeCompare(b.name));
 
   const [groupId, setGroupId] = useState<string | null>(null);
@@ -451,7 +452,7 @@ function SendRow({ s, onDelete }: { s: ScheduledSendRow; onDelete: (s: Scheduled
 }
 
 function Queue() {
-  const { sends, loaded, error } = useAdminData();
+  const { sends, loaded, error } = useSendData();
   const [toDelete, setToDelete] = useState<ScheduledSendRow | null>(null);
 
   const upcoming = sends.filter((s) => s.status === "pending").sort((a, b) => a.sendAt.localeCompare(b.sendAt));
@@ -508,7 +509,7 @@ function Queue() {
   );
 }
 
-export default function AdminSendPage() {
+export default function SendPage() {
   return (
     <div className="space-y-8">
       <Composer />

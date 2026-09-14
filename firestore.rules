@@ -34,14 +34,14 @@ service cloud.firestore {
     }
     // ---- Admin (Signal bot) ---------------------------------------------------
     // The Pi bot writes signal_* with a service account, which bypasses these
-    // rules; `write: if false` there is intentional. Only the admin's Google
-    // account (Firebase Auth) can read them or touch the send queue.
+    // rules; `write: if false` there is intentional. Every pledge may read the
+    // mirror; only the admin's Google account (Firebase Auth) touches the queue.
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'chasescron@gmail.com';
     }
-    match /signal_groups/{id}   { allow read: if isAdmin(); allow write: if false; }
-    match /signal_messages/{id} { allow read: if isAdmin(); allow write: if false; }
-    match /signal_meta/{id}     { allow read: if isAdmin(); allow write: if false; }
+    match /signal_groups/{id}   { allow read: if true; allow write: if false; }
+    match /signal_messages/{id} { allow read: if true; allow write: if false; }
+    match /signal_meta/{id}     { allow read: if true; allow write: if false; }
     match /scheduled_sends/{id} {
       allow read, delete: if isAdmin();
       allow create: if isAdmin()
