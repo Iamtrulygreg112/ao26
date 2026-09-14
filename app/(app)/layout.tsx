@@ -22,7 +22,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Nav name={session.name} />
-      <main className="mx-auto max-w-2xl px-4 pb-24 pt-6 md:pt-8">
+      <main className="mx-auto w-full max-w-2xl px-4 pb-24 pt-6 md:pt-8">
         <SignalDataProvider>
           <DataProvider fallback={<p className="pt-16 text-center text-muted">Loading…</p>}>{children}</DataProvider>
         </SignalDataProvider>
