@@ -13,8 +13,10 @@ import Spinner from "./Spinner";
 const OFFLINE_AFTER_MS = 3 * 60 * 1000;
 // How long "Linked ✓" shows before the card re-renders from linked_accounts.
 const LINKED_FLASH_MS = 2500;
-// A "pending" request older than this gets a "still waiting" note.
-const SLOW_START_MS = 30 * 1000;
+// A "pending" request older than this gets a note. The Pi runs one link
+// session at a time, so a request made while another code is live waits
+// its turn (each session lasts up to two minutes).
+const SLOW_START_MS = 8 * 1000;
 
 const OFFLINE_TEXT = "The Pi is offline right now — try later.";
 
@@ -129,7 +131,11 @@ export default function LinkCard({ memberId }: { memberId: string }) {
         <p className="flex items-center gap-2 text-sm">
           <Spinner /> Starting…
         </p>
-        {slow && <p className="text-sm text-muted">Still waiting on the Pi. If nothing shows up, reload and try again.</p>}
+        {slow && (
+          <p className="text-sm text-muted">
+            The Pi is showing someone else&apos;s code right now. Yours is next and can take up to two minutes — keep this page open.
+          </p>
+        )}
         {errors}
       </div>
     );
