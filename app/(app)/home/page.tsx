@@ -10,6 +10,7 @@ import { useData } from "@/lib/data";
 import { formatEventDate, isUpcoming, todayISO } from "@/lib/dates";
 import { rankOf } from "@/lib/standings";
 import { addWorkEntry, errorText } from "@/lib/writes";
+import { isLinked, useLinkedAccount } from "@/lib/linkData";
 import EventCard, { WeightPill } from "@/components/EventCard";
 import { CoveringPill } from "@/components/Roster";
 import VetoButton from "@/components/VetoButton";
@@ -20,6 +21,38 @@ function Stat({ label, value, tone = "text-text" }: { label: string; value: stri
     <div className="flex-1 rounded-xl border border-border bg-surface px-3 py-3">
       <p className={`text-2xl font-semibold tabular-nums tracking-tight ${tone}`}>{value}</p>
       <p className="mt-1 text-[10px] uppercase tracking-widest text-muted">{label}</p>
+    </div>
+  );
+}
+
+/** Top-of-home nudge: link Signal if not linked (or the link is gone), else a quiet confirmation. */
+function SignalLinkCard({ memberId }: { memberId: string }) {
+  const { account } = useLinkedAccount(memberId);
+  if (account === undefined) return null;
+
+  if (isLinked(account)) {
+    return (
+      <p className="text-sm text-muted">
+        Signal linked ✓ ·{" "}
+        <Link href="/link" className="underline underline-offset-2 transition hover:text-text">
+          Manage
+        </Link>
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">Link your Signal</p>
+        <p className="mt-0.5 text-sm text-muted">Lets the pledge-class Pi read the group chats on your account. Takes a minute.</p>
+      </div>
+      <Link
+        href="/link"
+        className="flex h-11 shrink-0 items-center rounded-xl bg-azure px-4 text-sm font-medium text-white transition active:scale-[0.98]"
+      >
+        Link Signal
+      </Link>
     </div>
   );
 }
@@ -72,6 +105,8 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
+      {me && <SignalLinkCard memberId={me} />}
+
       <section className="space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">Hi {session?.name}</h1>
         <div className="flex gap-2">

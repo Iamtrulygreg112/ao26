@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSignalData } from "@/lib/signalData";
 import { useSendData, type ScheduledSendRow, type SendPhotoDoc, type SendStatus } from "@/lib/sendData";
 import { MAX_PHOTOS, MAX_TEXT, cancelSend, deleteSend, loadSendPhotos, scheduleSend } from "@/lib/adminWrites";
@@ -512,6 +513,9 @@ function Queue() {
 export default function SendPage() {
   return (
     <div className="space-y-8">
+      <Link href="/link" className="inline-block text-sm text-muted underline underline-offset-2 transition hover:text-text">
+        Link accounts
+      </Link>
       <Composer />
       <Queue />
     </div>
