@@ -4,7 +4,7 @@
 // mounted only by the pages that need them (Home card, /link), not globally.
 
 import { useEffect, useState } from "react";
-import { collection, doc, onSnapshot } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import type { WithId } from "./types";
 
@@ -42,6 +42,14 @@ export type LinkedAccountRow = WithId<LinkedAccountDoc>;
 
 export type LinkedNow = LinkedAccountDoc & { status: "linked" };
 export const isLinked = (a: LinkedAccountDoc | null | undefined): a is LinkedNow => a?.status === "linked";
+
+/** A request the bot is still working on (or about to): pending, or waiting with time left. */
+export function isActiveRequest(r: LinkRequestDoc, now: number): boolean {
+  if (r.status === "pending") return true;
+  if (r.status !== "waiting") return false;
+  const expires = r.expiresAt ? new Date(r.expiresAt).getTime() : NaN;
+  return !Number.isFinite(expires) || expires > now;
+}
 
 // ---- Hooks --------------------------------------------------------------------
 
@@ -89,7 +97,10 @@ export function useLinkRequest(id: string | null): { request: LinkRequestRow | n
     if (!id) return;
     return onSnapshot(
       doc(db, "link_requests", id),
-      (s) => setState({ id, value: s.exists() ? { ...(s.data() as LinkRequestDoc), id: s.id } : null, error: null }),
+      (s) => {
+        console.debug("[link] request", s.id, s.exists() ? s.data() : "(missing)");
+        setState({ id, value: s.exists() ? { ...(s.data() as LinkRequestDoc), id: s.id } : null, error: null });
+      },
       (e) => setState({ id, value: null, error: e.message }),
     );
   }, [id]);
@@ -97,4 +108,30 @@ export function useLinkRequest(id: string | null): { request: LinkRequestRow | n
   if (!id) return { request: null, error: null };
   const current = state?.id === id ? state : null;
   return { request: current ? current.value : undefined, error: current?.error ?? null };
+}
+
+/**
+ * Every link_requests doc for one member, newest first, live. Used to attach
+ * to a request that is already pending/waiting (after a reload, or one the
+ * owner made for this member) instead of creating another one — the Pi runs
+ * one link session at a time, so extra requests only lengthen the queue.
+ * Single-field filter only (no orderBy), so no composite index is needed.
+ */
+export function useLinkRequests(memberId: string): { requests: LinkRequestRow[]; loaded: boolean; error: string | null } {
+  const [state, setState] = useState<Delivered<LinkRequestRow[]> | null>(null);
+
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, "link_requests"), where("memberId", "==", memberId)),
+      (s) => {
+        const rows = s.docs.map((d) => ({ ...(d.data() as LinkRequestDoc), id: d.id }));
+        rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setState({ id: memberId, value: rows, error: null });
+      },
+      (e) => setState({ id: memberId, value: null, error: e.message }),
+    );
+  }, [memberId]);
+
+  const current = state?.id === memberId ? state : null;
+  return { requests: current?.value ?? [], loaded: current !== null, error: current?.error ?? null };
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSignalData } from "@/lib/signalData";
-import { isLinked, useLinkedAccount, useLinkRequest } from "@/lib/linkData";
+import { isActiveRequest, isLinked, useLinkedAccount, useLinkRequest, useLinkRequests } from "@/lib/linkData";
 import { requestLink } from "@/lib/linkWrites";
 import { errorText } from "@/lib/writes";
 import { formatDateTime } from "@/lib/dates";
@@ -13,6 +13,10 @@ import Spinner from "./Spinner";
 const OFFLINE_AFTER_MS = 3 * 60 * 1000;
 // How long "Linked ✓" shows before the card re-renders from linked_accounts.
 const LINKED_FLASH_MS = 2500;
+// Attach to the member's newest expired/failed request only this long after
+// it was created, so "Code expired." is what you see after a reload, but not
+// on a visit days later.
+const RECENT_MS = 15 * 60 * 1000;
 // A "pending" request older than this gets a note. The Pi runs one link
 // session at a time, so a request made while another code is live waits
 // its turn (each session lasts up to two minutes).
@@ -66,16 +70,34 @@ function TextButton({ children, onClick, disabled }: { children: React.ReactNode
 
 /**
  * The request → QR → linked state machine for one member. Driven by
- * linked_accounts/{memberId} plus the one link_requests doc this card created;
- * the site only ever creates that doc — the bot owns every transition.
+ * linked_accounts/{memberId} plus one link_requests doc: the one this card
+ * created, or — after a reload, or when the owner made one for this member —
+ * the newest request that is still pending/waiting. The site only ever
+ * creates that doc; the bot owns every transition.
  */
 export default function LinkCard({ memberId }: { memberId: string }) {
   const { account, error: accountError } = useLinkedAccount(memberId);
-  const [requestId, setRequestId] = useState<string | null>(null);
-  const { request, error: requestError } = useLinkRequest(requestId);
+  const { requests, loaded: requestsLoaded, error: requestsError } = useLinkRequests(memberId);
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const now = useNow(1000);
+
+  // Newest request the bot is still working on, if any. Tracking it (rather
+  // than creating another) is what keeps repeated taps/reloads from queueing
+  // extra two-minute sessions on the Pi.
+  const active = requests.find((r) => isActiveRequest(r, now)) ?? null;
+  // The doc this card follows: the one it created, else the member's newest
+  // request if it is live or recent (expired/failed/"already linked" still
+  // show after a reload). A "linked" request is never followed — the Linked
+  // state comes from linked_accounts.
+  const newest = requests[0] ?? null;
+  const attachId =
+    newest && newest.status !== "linked" && (isActiveRequest(newest, now) || now - new Date(newest.createdAt).getTime() < RECENT_MS)
+      ? newest.id
+      : null;
+  const requestId = createdId ?? attachId;
+  const { request, error: requestError } = useLinkRequest(requestId);
 
   const { status: bot, loaded: botLoaded } = useSignalData();
   const lastSeenMs = bot ? new Date(bot.lastSeen).getTime() : NaN;
@@ -87,15 +109,16 @@ export default function LinkCard({ memberId }: { memberId: string }) {
   const requestStatus = request?.status;
   useEffect(() => {
     if (requestStatus !== "linked") return;
-    const t = setTimeout(() => setRequestId(null), LINKED_FLASH_MS);
+    const t = setTimeout(() => setCreatedId(null), LINKED_FLASH_MS);
     return () => clearTimeout(t);
   }, [requestStatus]);
 
   async function start() {
+    if (busy || active) return; // one live request per member; the bot serialises them anyway
     setBusy(true);
     setError(null);
     try {
-      setRequestId(await requestLink(memberId));
+      setCreatedId(await requestLink(memberId));
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -107,12 +130,12 @@ export default function LinkCard({ memberId }: { memberId: string }) {
   const errors = (
     <>
       {error && <p className="text-sm text-danger">{error}</p>}
-      {requestError && <p className="text-sm text-danger">{requestError}</p>}
+      {requestsError && <p className="text-sm text-danger">{requestsError}</p>}
       {accountError && <p className="text-sm text-danger">{accountError}</p>}
     </>
   );
 
-  if (account === undefined) {
+  if (account === undefined || !requestsLoaded) {
     return (
       <div className={`${frame} flex items-center gap-2 text-sm text-muted`}>
         <Spinner /> Loading…
@@ -123,6 +146,18 @@ export default function LinkCard({ memberId }: { memberId: string }) {
   const alreadyLinkedFail = request?.status === "failed" && /already linked/i.test(request.error ?? "");
 
   // ---- Request in flight ------------------------------------------------------
+
+  // The listener on the request doc failed: say so, rather than spinning forever.
+  if (requestError) {
+    return (
+      <div className={`${frame} space-y-3`}>
+        <p className="text-sm text-danger">{requestError}</p>
+        <PrimaryButton onClick={start} disabled={!online || !!active}>Try again</PrimaryButton>
+        {offlineNote}
+        {errors}
+      </div>
+    );
+  }
 
   if (busy || (requestId && request === undefined) || request?.status === "pending") {
     const slow = request?.status === "pending" && now - new Date(request.createdAt).getTime() > SLOW_START_MS;
