@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/useSession";
-import { isLinked, useLinkedAccounts } from "@/lib/linkData";
-import { TRACKED_MEMBERS } from "@/components/MemberGrid";
+import { isLinked, useLinkedAccount, useLinkedAccounts } from "@/lib/linkData";
+import { OWNER_ID, TRACKED_MEMBERS } from "@/lib/config";
 import LinkCard from "@/components/LinkCard";
-
-const OWNER_ID = "chase";
 
 /** Owner only: pick any other pledge and show a link code for them. */
 function LinkOthers() {
   const { accounts, loaded, error } = useLinkedAccounts();
-  const [picked, setPicked] = useState<string | null>(null);
+  const preselect = useSearchParams().get("member");
+  const [picked, setPicked] = useState<string | null>(() => (preselect && TRACKED_MEMBERS.some((m) => m.id === preselect) ? preselect : null));
   const linkedCount = TRACKED_MEMBERS.filter((m) => isLinked(accounts.get(m.id))).length;
 
   return (
@@ -56,6 +56,30 @@ function LinkOthers() {
   );
 }
 
+/**
+ * The owner's own account IS the Pi's account, so his card is replaced by a
+ * note. If linked_accounts/chase exists anyway, somebody scanned a code that was
+ * shown on the owner's card — say so and how to undo it.
+ */
+function OwnerNote() {
+  const { account } = useLinkedAccount(OWNER_ID);
+  return (
+    <div className="space-y-3 rounded-xl border border-border bg-surface p-4 text-sm">
+      <p className="text-muted">The Pi already runs on your Signal account — there&apos;s nothing to link for you. Use the chips below to link someone else.</p>
+      {isLinked(account) && (
+        <div className="space-y-1 rounded-lg bg-gold/10 px-3 py-2 text-gold">
+          <p className="font-medium">Someone else&apos;s phone is linked as &ldquo;{account.deviceName}&rdquo;.</p>
+          <p className="text-xs">
+            That happens when another person scans a code shown here for you. Likes as that person won&apos;t work until they fix it: on their phone, Signal → Settings → Linked
+            Devices → remove &ldquo;{account.deviceName}&rdquo;, then link again from their own chip below. The site can&apos;t move a link — the Pi records it under
+            whoever&apos;s code was scanned.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LinkPage() {
   const { session } = useSession();
   const me = session?.id ?? "";
@@ -65,14 +89,18 @@ export default function LinkPage() {
       <section className="space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">Link your Signal</h1>
         <p className="text-sm leading-relaxed text-muted">
-          This connects your Signal to the pledge-class Pi, the same way Signal Desktop connects to your phone. It lets the Pi see the
-          pledge group chats on your account. Right now it only reads — it never sends anything as you. You can remove it any time in
-          Signal → Settings → Linked Devices.
+          This connects your Signal to the pledge-class Pi, the same way Signal Desktop connects to your phone. The Pi sees the pledge
+          group chats on your account, and anyone in the PC can add a 👍 as you on messages in those chats. It never sends messages as
+          you and never touches your DMs. You can remove it any time in Signal → Settings → Linked Devices.
         </p>
-        {me && <LinkCard memberId={me} />}
+        {me && (me === OWNER_ID ? <OwnerNote /> : <LinkCard memberId={me} />)}
       </section>
 
-      {me === OWNER_ID && <LinkOthers />}
+      {me === OWNER_ID && (
+        <Suspense fallback={null}>
+          <LinkOthers />
+        </Suspense>
+      )}
     </div>
   );
 }

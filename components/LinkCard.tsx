@@ -6,6 +6,8 @@ import { isActiveRequest, isLinked, useLinkedAccount, useLinkRequest, useLinkReq
 import { requestLink } from "@/lib/linkWrites";
 import { errorText } from "@/lib/writes";
 import { formatDateTime } from "@/lib/dates";
+import { memberName } from "@/lib/config";
+import { getSession } from "@/lib/session";
 import QrCode from "./QrCode";
 import Spinner from "./Spinner";
 
@@ -159,12 +161,12 @@ export default function LinkCard({ memberId }: { memberId: string }) {
     );
   }
 
-  if (busy || (requestId && request === undefined) || request?.status === "pending") {
+  if (busy || (requestId && request === undefined) || request?.status === "pending" || request?.status === "queued") {
     const slow = request?.status === "pending" && now - new Date(request.createdAt).getTime() > SLOW_START_MS;
     return (
       <div className={`${frame} space-y-2`}>
         <p className="flex items-center gap-2 text-sm">
-          <Spinner /> Starting…
+          <Spinner /> {request?.status === "queued" ? `You're #${request.position ?? "?"} in line…` : "Starting…"}
         </p>
         {slow && (
           <p className="text-sm text-muted">
@@ -195,6 +197,11 @@ export default function LinkCard({ memberId }: { memberId: string }) {
           <p className="text-center text-sm tabular-nums text-muted">
             Expires in {Number.isFinite(remaining) ? countdown(remaining) : "—"}
           </p>
+          {getSession()?.id !== memberId && (
+            <p className="rounded-lg bg-gold/10 px-3 py-1.5 text-sm font-medium text-gold">
+              This code is for {memberName(memberId)} only — only {memberName(memberId)}&apos;s phone should scan it.
+            </p>
+          )}
           <p className="text-sm">On the phone that has Signal: Settings → Linked Devices → + → scan this.</p>
           <a href={request.uri} className="block text-sm text-muted underline underline-offset-2 transition hover:text-text">
             Can&apos;t scan? On this phone, try opening the link in Signal
@@ -209,7 +216,7 @@ export default function LinkCard({ memberId }: { memberId: string }) {
     // Countdown ran out before the bot marked it; fall through to the expired view.
   }
 
-  if (request?.status === "expired" || request?.status === "waiting") {
+  if (request?.status === "expired" || request?.status === "superseded" || request?.status === "waiting") {
     return (
       <div className={`${frame} space-y-3`}>
         <p className="text-sm">Code expired.</p>

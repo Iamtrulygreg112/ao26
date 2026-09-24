@@ -10,7 +10,7 @@ import type { WithId } from "./types";
 
 // ---- Firestore contract -------------------------------------------------------
 
-export type LinkRequestStatus = "pending" | "waiting" | "linked" | "expired" | "failed";
+export type LinkRequestStatus = "pending" | "queued" | "waiting" | "linked" | "expired" | "superseded" | "failed";
 
 // link_requests/{autoId} — CREATED BY THE SITE as "pending"; the bot moves
 // status along and adds the other fields. The site never updates a request.
@@ -19,6 +19,10 @@ export type LinkRequestDoc = {
   requestedBy: string; // session id
   status: LinkRequestStatus;
   createdAt: string; // ISO
+  // Set by the bot on "queued" (all link slots busy): 1-based place in line.
+  position?: number;
+  // Set by the bot on "superseded" (a newer request for the same member won).
+  supersededBy?: string;
   // Set by the bot on "waiting".
   uri?: string; // sgnl://linkdevice?... — rendered as the QR
   expiresAt?: string; // ISO
@@ -45,7 +49,7 @@ export const isLinked = (a: LinkedAccountDoc | null | undefined): a is LinkedNow
 
 /** A request the bot is still working on (or about to): pending, or waiting with time left. */
 export function isActiveRequest(r: LinkRequestDoc, now: number): boolean {
-  if (r.status === "pending") return true;
+  if (r.status === "pending" || r.status === "queued") return true;
   if (r.status !== "waiting") return false;
   const expires = r.expiresAt ? new Date(r.expiresAt).getTime() : NaN;
   return !Number.isFinite(expires) || expires > now;

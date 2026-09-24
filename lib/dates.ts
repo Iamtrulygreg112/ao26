@@ -76,3 +76,28 @@ export function formatRelative(iso: string, now: number = Date.now()): string {
   if (h < 48) return `${h}h ago`;
   return `${Math.round(h / 24)}d ago`;
 }
+
+// ---- Chat day dividers ---------------------------------------------------------
+
+const laDayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+const laDayLabel = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", month: "short", day: "numeric" });
+const laDayLabelYear = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", month: "short", day: "numeric", year: "numeric" });
+
+/** "YYYY-MM-DD" in the app timezone, for grouping messages by day. */
+export function dayKey(ms: number): string {
+  return laDayKey.format(new Date(ms));
+}
+
+/** "Today", "Yesterday", "Sat, Sep 12" (with the year once it differs). */
+export function formatDayLabel(ms: number, now: number = Date.now()): string {
+  const key = dayKey(ms);
+  if (key === dayKey(now)) return "Today";
+  if (key === dayKey(now - 24 * 60 * 60 * 1000)) return "Yesterday";
+  const d = new Date(ms);
+  return key.slice(0, 4) === dayKey(now).slice(0, 4) ? laDayLabel.format(d) : laDayLabelYear.format(d);
+}
+
+/** "9:41 PM" in the app timezone. */
+export function formatClock(ms: number): string {
+  return laTime.format(new Date(ms));
+}

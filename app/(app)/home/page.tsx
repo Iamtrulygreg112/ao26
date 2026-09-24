@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MEMBERS } from "@/lib/config";
+import { MEMBERS, OWNER_ID } from "@/lib/config";
 import { clearSession } from "@/lib/session";
 import { useSession } from "@/lib/useSession";
 import { useData } from "@/lib/data";
@@ -28,6 +28,8 @@ function Stat({ label, value, tone = "text-text" }: { label: string; value: stri
 /** Top-of-home nudge: link Signal if not linked (or the link is gone), else a quiet confirmation. */
 function SignalLinkCard({ memberId }: { memberId: string }) {
   const { account } = useLinkedAccount(memberId);
+  // The Pi runs on the owner's own account; there is nothing for him to link.
+  if (memberId === OWNER_ID) return null;
   if (account === undefined) return null;
 
   if (isLinked(account)) {

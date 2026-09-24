@@ -41,6 +41,11 @@ export const MEMBERS: Member[] = NAMES.map((name) => ({
 
 export const MEMBER_IDS: string[] = MEMBERS.map((m) => m.id);
 
+export const OWNER_ID = "chase";
+
+/** The 28 pledges the bot tracks (everyone but the owner), in config order. */
+export const TRACKED_MEMBERS: Member[] = MEMBERS.filter((m) => m.id !== OWNER_ID);
+
 export function memberName(id: string): string {
   return MEMBERS.find((m) => m.id === id)?.name ?? id;
 }

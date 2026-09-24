@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { TITLE } from "@/lib/config";
 import { clearSession, getSession } from "@/lib/session";
 
-type Tab = { href: "/home" | "/events" | "/signal" | "/standings" | "/send"; label: string; icon: React.ReactNode };
+type Tab = { href: "/home" | "/chats" | "/people" | "/events" | "/standings" | "/send"; label: string; icon: React.ReactNode };
 
 const ICON = {
   width: 22,
@@ -31,21 +31,33 @@ const TABS: Tab[] = [
     ),
   },
   {
+    href: "/chats",
+    label: "Chats",
+    icon: (
+      <svg {...ICON}>
+        <path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/people",
+    label: "People",
+    icon: (
+      <svg {...ICON}>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+        <circle cx="17" cy="9" r="2.5" />
+        <path d="M21.5 19a5 5 0 0 0-5.5-4.6" />
+      </svg>
+    ),
+  },
+  {
     href: "/events",
     label: "Events",
     icon: (
       <svg {...ICON}>
         <rect x="3" y="5" width="18" height="16" rx="2" />
         <path d="M3 10h18M8 3v4M16 3v4" />
-      </svg>
-    ),
-  },
-  {
-    href: "/signal",
-    label: "Signal",
-    icon: (
-      <svg {...ICON}>
-        <path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z" />
       </svg>
     ),
   },
@@ -117,17 +129,17 @@ export default function Nav({ name }: { name: string }) {
 
       {/* Bottom bar, mobile */}
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
-        <div className={`grid h-16 ${tabs.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
+        <div className={`grid h-14 ${tabs.length === 6 ? "grid-cols-6" : "grid-cols-5"}`}>
           {tabs.map((t) => (
             <Link
               key={t.href}
               href={t.href}
-              className={`flex flex-col items-center justify-center gap-1 text-xs font-medium transition ${
-                isActive(t.href) ? "text-azure" : "text-muted"
-              }`}
+              aria-label={t.label}
+              title={t.label}
+              className={`flex items-center justify-center transition ${isActive(t.href) ? "text-azure" : "text-muted"}`}
             >
               {t.icon}
-              {t.label}
+              <span className="sr-only">{t.label}</span>
             </Link>
           ))}
         </div>
