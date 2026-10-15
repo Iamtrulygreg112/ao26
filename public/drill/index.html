@@ -229,7 +229,7 @@ const EXEC = [
  ["President",["Alex Wight"]],["VP",["Rohan Panchal"]],["Secretary",["Elliot Rosin"]],
  ["Brotherhood",["Diego Jimenez"]],["Treasurer",["Alex Stankus"]],
  ["Rush",["Kavi Seidman","Aaron Reimer","Henry Leavenworth"]],["Risk",["Justin Tella","Mason Morris"]],
- ["Social",["Henry Crabtree","Nizhoni Deschene","Aaron Rome"]],["Housing Manager",["Mateo Espinoza"]],
+ ["Social",["Henry Crabtree","Nizhoni Deschene","Aaron Rome","Vishaal Krishan"]],["Housing Manager",["Mateo Espinoza"]],
  ["Alumni",["Logan Hardy"]],["New Member Educator",["Armand Khchirian"]],["IFC Coordinator",["Rory Bushong"]],
  ["Social Media",["Phoenix Ho"]],["Retreat",["Brandon Fraser"]],["Philanthropy",["Jamison Wu"]]
 ].map(([pos,people])=>({pos,people}));
@@ -285,8 +285,8 @@ function matchName(input,pool){
 
 /* ===================== QUESTION DECKS (all multiple choice, Leitner-tracked) ===================== */
 const DECKS = {
- members:{label:"Who's in which class", build(){return ALL.map(p=>({id:"m:"+p.name,prompt:`Which pledge class is <b>${esc(p.name)}</b> in?`,options:ORDER.slice(),answer:p.cls,note:[p.major,p.home].filter(Boolean).join(" · "),keepOrder:true}))}},
- whois:{label:"Know your brothers", build(){return ALL.filter(p=>p.major||p.home).map(p=>{const cls=CLASSES.find(c=>c.name===p.cls).members.filter(x=>x.name!==p.name);return {id:"w:"+p.name,prompt:`${esc(p.cls)} · ${esc([p.major,p.home&&("from "+p.home)].filter(Boolean).join(" · "))}`,sub:"Who is this?",options:shuffle([p.name,...sample(cls,3).map(x=>x.name)]),answer:p.name}})}},
+ members:{label:"Who's in which class", build(){return ALL.map(p=>({id:"m:"+p.name,prompt:`Which pledge class is <b>${esc(p.name)}</b> in?`,options:ORDER.slice(),answer:p.cls,note:p.home?"from "+p.home:"",keepOrder:true}))}},
+ whois:{label:"Know your brothers", build(){return ALL.filter(p=>p.home).map(p=>{const cls=CLASSES.find(c=>c.name===p.cls).members.filter(x=>x.name!==p.name);return {id:"w:"+p.name,prompt:`${esc(p.cls)} · from ${esc(p.home)}`,sub:"Who is this?",options:shuffle([p.name,...sample(cls,3).map(x=>x.name)]),answer:p.name}})}},
  exec:{label:"Exec board", build(){const qs=[];EXEC.forEach(e=>{const ans=e.people.join(", ");const others=sample(EXEC.filter(x=>x!==e),3).map(x=>x.people.join(", "));qs.push({id:"e:"+e.pos,prompt:`Who holds <b>${esc(e.pos)}</b>?`,options:shuffle([ans,...others]),answer:ans});e.people.forEach(p=>qs.push({id:"ep:"+p,prompt:`What exec position does <b>${esc(p)}</b> hold?`,options:shuffle([e.pos,...sample(EXEC.filter(x=>x!==e),3).map(x=>x.pos)]),answer:e.pos,note:"Pledge class: "+((ALL.find(x=>x.name===p)||{}).cls||"?")}))});return qs}},
  greek:{label:"Greek alphabet", build(){const qs=[];GREEK.forEach((g,i)=>{if(i<23){const nx=GREEK[i+1].n;qs.push({id:"gn:"+g.n,prompt:`What letter comes right after <b>${g.n}</b>?`,options:shuffle([nx,...sample(GREEK.filter(x=>x.n!==nx&&x.n!==g.n),3).map(x=>x.n)]),answer:nx})}
    if(i>0){const pv=GREEK[i-1].n;qs.push({id:"gp:"+g.n,prompt:`What letter comes right before <b>${g.n}</b>?`,options:shuffle([pv,...sample(GREEK.filter(x=>x.n!==pv&&x.n!==g.n),3).map(x=>x.n)]),answer:pv})}
@@ -357,7 +357,7 @@ function home(){
   <h3>Study plan until Sunday</h3>
   <ol class="plan">
     <li><div><b>Today:</b> Greek alphabet speed run until you're under 60s, then Class order. These are the backbone for everything else.</div></li>
-    <li><div><b>Thu:</b> Creed in chunks. Read → Fade → First letters → Recite, one line at a time, then the whole thing. Same for the chant and Old Alpha.</div></li>
+    <li><div><b>Thu:</b> The whole Creed. Read → Fade → First letters → Recite until you can type it out in full. Same for the chant and Old Alpha.</div></li>
     <li><div><b>Fri:</b> Recite each pledge class from memory. Start with Lambda and Mu (smallest), finish with Omicron.</div></li>
     <li><div><b>Sat:</b> Exec recall + History. Quiz each other out loud: one person reads a position, the other names the brother.</div></li>
     <li><div><b>Sun morning:</b> Two mock midterms. Re-drill anything you missed, then recite the creed and songs once out loud.</div></li>
@@ -378,7 +378,7 @@ function classes(){
     if(m==="order") orderDrill(st);
     if(m==="recite") reciteClass(st);
     if(m==="which") mcCard(st,{label:"Which class?",getQ:l=>pick(["members"],l)});
-    if(m==="whois") mcCard(st,{label:"Major + hometown → name",getQ:l=>pick(["whois"],l)});
+    if(m==="whois") mcCard(st,{label:"Hometown → name",getQ:l=>pick(["whois"],l)});
     if(m==="list") roster(st);
   });
 }
@@ -431,7 +431,7 @@ function reciteClass(st){
 function roster(st){
   st.innerHTML=`<p class="hint">Tap a blurred name to reveal it. Cover-and-recall works better than re-reading.</p>
   <div class="row" style="margin-bottom:10px"><button class="btn ghost" id="blurT">Toggle blur</button></div>`+
-  CLASSES.map(c=>`<h3>${c.name} · ${c.members.length}</h3><div class="tablewrap card" style="padding:4px 10px"><table><thead><tr><th>Name</th><th>Major</th><th>From</th></tr></thead><tbody>${c.members.map(p=>`<tr><td><span class="nm">${esc(p.name)}</span></td><td>${esc(p.major||"—")}</td><td>${esc(p.home||"—")}</td></tr>`).join("")}</tbody></table></div>`).join("");
+  CLASSES.map(c=>`<h3>${c.name} · ${c.members.length}</h3><div class="tablewrap card" style="padding:4px 10px"><table><thead><tr><th>Name</th><th>From</th></tr></thead><tbody>${c.members.map(p=>`<tr><td><span class="nm">${esc(p.name)}</span></td><td>${esc(p.home||"—")}</td></tr>`).join("")}</tbody></table></div>`).join("");
   let blur=false;
   st.querySelector("#blurT").onclick=()=>{blur=!blur;st.querySelectorAll(".nm").forEach(n=>n.classList.toggle("hidecell",blur))};
   st.querySelectorAll(".nm").forEach(n=>n.onclick=()=>n.classList.remove("hidecell"));
@@ -497,7 +497,8 @@ function greekSpeed(st){
 /* ---------- MEMORIZER (creed, chant, song) ---------- */
 function memorizer(st,key,text){
   const lines=text.split("\n").map(s=>s.trim()).filter(Boolean);
-  const lvl=LS.get("mlvl_"+key,"read"); let chunk=LS.get("mchunk_"+key,"all"); if(chunk!=="all"&&+chunk>=lines.length)chunk="all";
+  const whole=key==="creed"; // the creed is always recited in full
+  const lvl=LS.get("mlvl_"+key,"read"); let chunk=whole?"all":LS.get("mchunk_"+key,"all"); if(chunk!=="all"&&+chunk>=lines.length)chunk="all";
   const sel=chunk==="all"?lines:[lines[+chunk]];
   const LV=[["read","1 · Read"],["fade","2 · Fade"],["initials","3 · First letters"],["recite","4 · Recite"]];
   let seed=LS.get("mseed",1);
@@ -507,7 +508,7 @@ function memorizer(st,key,text){
   if(lvl==="fade") body=`<div class="text">${sel.map((l,li)=>`<p class="ln">${l.split(/\s+/).map((w,wi)=>hideWord(li,wi)?`<span class="blank" tabindex="0">${esc(w)}</span>`:esc(w)).join(" ")}</p>`).join("")}</div><div class="row"><button class="btn ghost" id="reroll">Hide different words</button><span class="hint">Say it out loud. Tap a blank to peek.</span></div>`;
   if(lvl==="initials") body=`<div class="text ini">${sel.map(l=>`<p class="ln">${esc(l.split(/\s+/).map(w=>w.replace(/[A-Za-z'’]+/,m=>m[0])).join(" "))}</p>`).join("")}</div><p class="hint">Only first letters. Say every word from memory.</p>`;
   if(lvl==="recite") body=`<textarea id="rt" placeholder="Type it from memory. Punctuation and capitals don't count."></textarea><div class="row" style="margin-top:10px"><button class="btn" id="chk">Check</button><span class="hint">Best: ${LS.get("mbest_"+key+"_"+chunk,null)??"—"}${LS.get("mbest_"+key+"_"+chunk,null)!=null?"%":""}</span></div><div id="diff"></div>`;
-  st.innerHTML=`<div class="chunks"><button data-ch="all" aria-pressed="${chunk==="all"}">Whole thing</button>${lines.map((_,i)=>`<button data-ch="${i}" aria-pressed="${String(i)===String(chunk)}">Line ${i+1}</button>`).join("")}</div>
+  st.innerHTML=`${whole?"":`<div class="chunks"><button data-ch="all" aria-pressed="${chunk==="all"}">Whole thing</button>${lines.map((_,i)=>`<button data-ch="${i}" aria-pressed="${String(i)===String(chunk)}">Line ${i+1}</button>`).join("")}</div>`}
   <div class="modes" style="margin-top:0">${LV.map(([k,l])=>`<button data-l="${k}" aria-pressed="${k===lvl}">${l}</button>`).join("")}</div>
   <div class="card">${body}</div>`;
   st.querySelectorAll("[data-ch]").forEach(b=>b.onclick=()=>{LS.set("mchunk_"+key,b.dataset.ch);memorizer(st,key,text)});
@@ -531,7 +532,7 @@ function memorizer(st,key,text){
   };
 }
 function creed(){
-  $("#main").innerHTML=`<h2>The Creed</h2><p class="hint">Otis Allan Glazebrook, 1880. Work one line at a time through all four levels, then the whole thing. 100% on Recite is the goal.</p><div id="stage"></div><h3>Quick check</h3><div id="cq"></div>`;
+  $("#main").innerHTML=`<h2>The Creed</h2><p class="hint">Otis Allan Glazebrook, 1880. Read → Fade → First letters → Recite, always the whole creed. 100% on Recite, typed out in full, is the goal.</p><div id="stage"></div><h3>Quick check</h3><div id="cq"></div>`;
   memorizer($("#stage"),"creed",CREED);
   mcCard($("#cq"),{label:"What comes next?",getQ:l=>pick(["creed"],l)});
 }
