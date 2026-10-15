@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { TITLE } from "@/lib/config";
 import { clearSession, getSession } from "@/lib/session";
 
-type Tab = { href: "/home" | "/chats" | "/people" | "/events" | "/standings" | "/send"; label: string; icon: React.ReactNode };
+type Tab = { href: "/home" | "/chats" | "/people" | "/events" | "/standings" | "/drill" | "/send"; label: string; icon: React.ReactNode };
 
 const ICON = {
   width: 22,
@@ -70,6 +70,16 @@ const TABS: Tab[] = [
       </svg>
     ),
   },
+  {
+    href: "/drill",
+    label: "Drill",
+    icon: (
+      <svg {...ICON}>
+        <path d="M4 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z" />
+        <path d="M20 4h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z" />
+      </svg>
+    ),
+  },
 ];
 
 // Owner-only. This only hides the tab; the /send layout gate and the
@@ -129,7 +139,7 @@ export default function Nav({ name }: { name: string }) {
 
       {/* Bottom bar, mobile */}
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
-        <div className={`grid h-14 ${tabs.length === 6 ? "grid-cols-6" : "grid-cols-5"}`}>
+        <div className={`grid h-14 ${tabs.length === 7 ? "grid-cols-7" : "grid-cols-6"}`}>
           {tabs.map((t) => (
             <Link
               key={t.href}

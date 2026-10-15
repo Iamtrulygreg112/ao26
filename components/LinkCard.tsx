@@ -62,13 +62,6 @@ function PrimaryButton({ children, onClick, disabled }: { children: React.ReactN
   );
 }
 
-function TextButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} className="text-sm text-muted underline underline-offset-2 transition hover:text-text disabled:opacity-60">
-      {children}
-    </button>
-  );
-}
 
 /**
  * The request → QR → linked state machine for one member. Driven by
@@ -250,7 +243,15 @@ export default function LinkCard({ memberId }: { memberId: string }) {
         {alreadyLinkedFail && (
           <p className="text-sm text-muted">Already linked — remove pledgepi from Signal → Linked Devices first, then try again.</p>
         )}
-        <TextButton onClick={start} disabled={!online}>Link again</TextButton>
+        <p className="text-sm text-muted">Reinstalled Signal, or removed the Pi from your Linked Devices? Link again from here.</p>
+        <button
+          type="button"
+          onClick={start}
+          disabled={!online}
+          className="h-11 rounded-xl border border-border bg-surface2 px-4 text-sm font-medium transition active:scale-[0.98] disabled:opacity-60"
+        >
+          Link again
+        </button>
         {offlineNote}
         {errors}
       </div>

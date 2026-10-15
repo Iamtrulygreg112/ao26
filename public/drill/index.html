@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ATΩ Pledge Drill</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Libre+Franklin:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<style>
+/* Layout: one study column; sticky section rail on top; each section = mode picker + one active drill card */
+:root{
+  --bg:#eef2f8; --panel:#ffffff; --ink:#0f1d33; --muted:#566279; --line:#d3dbe8;
+  --azure:#2b66ad; --azure-soft:#e1ebf7; --gold:#a97f1f; --gold-soft:#f6edd6;
+  --good:#1f7a4a; --good-soft:#dff2e7; --bad:#b3372f; --bad-soft:#f8e1de;
+  --f-display:"Cinzel",Georgia,"Times New Roman",serif;
+  --f-body:"Libre Franklin",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a1322; --panel:#111e33; --ink:#e6ecf5; --muted:#9aa8bf; --line:#24344f;
+  --azure:#79aceb; --azure-soft:#172a47; --gold:#dcb65c; --gold-soft:#2c2614;
+  --good:#5fcf8f; --good-soft:#123222; --bad:#f08a80; --bad-soft:#3a1a18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a1322; --panel:#111e33; --ink:#e6ecf5; --muted:#9aa8bf; --line:#24344f;
+  --azure:#79aceb; --azure-soft:#172a47; --gold:#dcb65c; --gold-soft:#2c2614;
+  --good:#5fcf8f; --good-soft:#123222; --bad:#f08a80; --bad-soft:#3a1a18; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 60px}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:14px;border-bottom:2px solid var(--gold)}
+h1{font-family:var(--f-display);font-size:clamp(26px,6vw,36px);margin:0;letter-spacing:.02em;line-height:1.1;text-wrap:balance}
+h1 .om{color:var(--gold)}
+.sub{color:var(--muted);margin:4px 0 0;font-size:14px}
+.count{font-family:var(--f-mono);font-size:13px;background:var(--gold-soft);color:var(--gold);padding:6px 10px;border-radius:6px;white-space:nowrap}
+nav.rail{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:12px 0;margin-bottom:8px;scrollbar-width:none}
+nav.rail::-webkit-scrollbar{display:none}
+nav.rail button{flex:0 0 auto;font:600 13px var(--f-body);letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:8px 12px;border-radius:999px;cursor:pointer}
+nav.rail button[aria-current="true"]{background:var(--azure);border-color:var(--azure);color:var(--panel)}
+h2{font-family:var(--f-display);font-size:22px;margin:18px 0 4px;letter-spacing:.02em}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:22px 0 8px}
+p{margin:0 0 10px}
+.modes{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 14px}
+.modes button{font:500 14px var(--f-body);border:1px solid var(--line);background:transparent;color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer}
+.modes button[aria-pressed="true"]{border-color:var(--gold);background:var(--gold-soft);color:var(--ink);font-weight:600}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.q{font-size:19px;font-weight:600;margin-bottom:6px;text-wrap:balance}
+.qsub{color:var(--muted);font-size:14px;margin-bottom:14px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;font:500 15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:11px 14px;cursor:pointer}
+.opt:hover{border-color:var(--azure)}
+.opt.right{background:var(--good-soft);border-color:var(--good);color:var(--ink)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad);color:var(--ink)}
+.opt:disabled{cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font:600 14px var(--f-body);border:none;border-radius:8px;padding:10px 16px;cursor:pointer;background:var(--azure);color:var(--panel)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn.gold{background:var(--gold);color:var(--panel)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+input[type=text],textarea{width:100%;font:16px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:150px;resize:vertical;line-height:1.55}
+.meta{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap}
+.feedback{margin-top:12px;padding:10px 12px;border-radius:8px;font-size:14px}
+.feedback.good{background:var(--good-soft);color:var(--good)}
+.feedback.bad{background:var(--bad-soft);color:var(--bad)}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pill{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--azure-soft);color:var(--ink)}
+.pill.miss{background:var(--bad-soft)}
+.pill.other{background:var(--gold-soft)}
+.mastery{display:grid;gap:10px}
+.mrow{display:grid;grid-template-columns:120px 1fr 48px;gap:10px;align-items:center;font-size:14px}
+.bar{height:8px;border-radius:4px;background:var(--azure-soft);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--azure)}
+.mrow b{font-family:var(--f-mono);font-weight:500;font-size:12px;text-align:right;color:var(--muted)}
+.plan{display:grid;gap:8px;counter-reset:s}
+.plan li{list-style:none;display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:start}
+.plan li::before{counter-increment:s;content:counter(s);font-family:var(--f-mono);font-size:12px;width:24px;height:24px;border-radius:50%;background:var(--gold-soft);color:var(--gold);display:grid;place-items:center}
+.plan{padding:0;margin:0}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.hidecell{color:transparent;background:var(--azure-soft);border-radius:4px;cursor:pointer;user-select:none}
+.greekgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.gl{border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center;background:var(--bg);min-height:62px}
+.gl .s{font-size:22px;line-height:1.1;font-family:Georgia,"Times New Roman",serif}
+.gl .n{font-size:11px;color:var(--muted)}
+.gl.done{background:var(--good-soft);border-color:var(--good)}
+.gl.next{border-color:var(--gold);border-width:2px}
+.gl.hidden .s,.gl.hidden .n{visibility:hidden}
+.text{font-size:17px;line-height:1.9}
+.text .ln{margin:0 0 6px}
+.blank{display:inline-block;min-width:2.2em;border-bottom:2px solid var(--gold);color:transparent;cursor:pointer;line-height:1.2}
+.blank.show{color:var(--gold);border-color:transparent}
+.ini{font-family:var(--f-mono);font-size:16px;letter-spacing:.06em}
+.diff .ok{color:var(--good)}
+.diff .miss{color:var(--bad);text-decoration:underline;font-weight:600}
+.diff .extra{color:var(--muted);text-decoration:line-through}
+.chunks{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 12px}
+.chunks button{font:500 12px var(--f-mono);border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:6px;padding:4px 8px;cursor:pointer}
+.chunks button[aria-pressed="true"]{border-color:var(--azure);color:var(--azure)}
+.order-slots{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.slot{min-width:92px;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;text-align:center;font-weight:600;color:var(--muted)}
+.slot.filled{border-style:solid;border-color:var(--good);color:var(--ink);background:var(--good-soft)}
+.hint{font-size:13px;color:var(--muted)}
+.big{font-family:var(--f-mono);font-size:28px}
+.fact{display:grid;grid-template-columns:110px 1fr;gap:4px 12px;font-size:15px}
+.fact dt{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+.fact dd{margin:0 0 6px;font-weight:500}
+.split{display:grid;gap:12px}
+@media (min-width:620px){.split{grid-template-columns:1fr 1fr}}
+.min0{min-width:0}
+@media (max-width:420px){.mrow{grid-template-columns:96px 1fr 40px}.fact{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.opt,.btn{transition:background .15s,border-color .15s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>A<span class="om">T</span>Ω Pledge Drill</h1>
+      <p class="sub">Fall '26 · Omicron class · active recall + spaced repetition</p>
+    </div>
+    <div class="count" id="countdown">Midterm Sunday</div>
+  </header>
+  <nav class="rail" id="rail"></nav>
+  <main id="main"></main>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+const CLASSES = [
+ {name:"Omicron", m:`Adrian Wei|Econ|NYC
+Aja Lapidus|Neuroscience|LA
+Alex Thompson|MCB|Davis
+Berk Yilmaz|Econ and data science|NYC
+Chase Peters|Physics|Walnut Creek
+Declan Cunningham|Environmental Science|Vail, CO
+Emilio Price|Math|Oakland
+Gabe Milanfar|Legal studies|Walnut Creek
+Hayden Mah|Political econ|LA
+Husam Arab|Neuroscience|LA
+Ishaan Ammundi|Econ|Lafayette
+James Llewellyn|History|Fullerton
+Jett Marshall|Undeclared|Weed
+Kaden Kwak|Undeclared|Irvine (OC)
+Kyan Kumar|Business|LA
+Kyle Cortes|Econ|Los Gatos
+Landon Carter|Environmental Econ|Alexandria, Virginia
+Luca Oathem|Environmental econ|Lafayette
+Marty Slack|Statistics|Huntington Beach
+Matheus Dabus|Materials Engineering|Miami
+Micah Von dem Busche|Physics|Irvine (OC)
+Sebastian Ter Muelen|Chemical engineering|Seattle
+Tristan Gude|Economics|Orange County
+Tucker Kurth|Environmental Econ|Marin
+Will Beesley|Physics|Menlo Park
+Wyatt Dalby|Electrical engineering|Laguna
+Xander Lippman|Econ|LA`},
+ {name:"Xi", m:`Anish Raman|Data Science|Redondo Beach
+Ben Farnsworth|Architecture|Denver, CO
+Benoit Pelchat|MCB|Moraga, CA
+Chad Smith|Physics|Windsor
+Dhruv Vallurupalli|EECS|Boston, MA
+Evren Dogrul|Env. Engineering|LA
+Heron Nonones Stone|Neuroscience|Sacramento
+Jethro Lewis|Econ|Julian, CA
+Kavan Kumar|Chembio|SF
+Nathan Greif|Poli Sci|LA
+Noah Smith|Env. Engineering|LA
+Pasha Raoufi|Econ|Redlands, CA
+Sameer Khan|EECS|Phoenix, AZ
+Santi Sandoval|Econ|Irvine`},
+ {name:"Nu", m:`Aaron Rome|Civil Engineering|El Cerrito
+Arin Awalegaonkar|Math + Econ|Chicago
+Armand Khchirian|Math|LA
+Bryce Merrill||
+Caedin Sikora|Undeclared|Connecticut
+Carson Bartley||LA
+Finn Rawley|Econ|New York
+Harlo Cozzens||LA
+Henry Crabtree|Math|LA
+Henry Leavenworth||SF
+Jamison Wu||Oklahoma
+Julio Perez||LA
+Justin Tella||LA
+Kavi Seidman|Polisci + Music|LA
+Keaton Diehl||Switzerland
+Kerem Ozkan|Math|LA
+Kyle Djibo|Business|Dubai
+Marcus Kapetanios||UK
+Mason Morris||SF
+Nizhoni Deschene||DC
+Phoenix Ho|Undeclared|Colorado
+Shawyaan Hajebi||SF`},
+ {name:"Mu", m:`Aaron Reimer|Economics|Fresno
+Aneesh Srirambhatla|Data Science|Torrance
+Arthur Qin|Neuroscience|Palos Verdes
+Chase Palisoc|Polisci|Vallejo
+Dennis Vengerov|Data Science|San Jose
+Diego Fraembs|Civil Engineering|San Bernardino
+Matthew Pitcher|History + Polisci|Fresno
+Oliver DeVito|Business|Marin
+Ryan Hattar|Business|OC
+Will Marsh|Applied Math|Menlo Park`},
+ {name:"Lambda", m:`Alex Stankus|EECS|Palm Springs
+Alex Wight|Economics|Washington D.C.
+Brandon Fraser|Applied Math|OC
+Devan Elson|MCB|Davis
+Diego Jimenez|Political Econ|San Pedro
+Elliot Rosin|Economics|LA
+Ethan Lin|Applied Math|OC
+John Mathison|Economics|SD
+Logan Hardy|Business|OC
+Mateo Espinoza|History|Palo Alto
+Raj Boparai|CS|New Jersey
+Rishi Sinha|EECS|San Jose
+Rohan Panchal|Economics|Los Altos
+Rory Bushong|Economics|Indiana
+Ryder Dittman|Undecided|Tahoe
+Vishaal Krishan|Business|OC`}
+].map(c=>({name:c.name, members:c.m.split("\n").map(l=>{const [n,maj,home]=l.split("|");return {name:n.trim(),major:(maj||"").trim(),home:(home||"").trim(),cls:c.name}})}));
+const ORDER = CLASSES.map(c=>c.name); // newest → oldest
+const ALL = CLASSES.flatMap(c=>c.members);
+
+const EXEC = [
+ ["President",["Alex Wight"]],["VP",["Rohan Panchal"]],["Secretary",["Elliot Rosin"]],
+ ["Brotherhood",["Diego Jimenez"]],["Treasurer",["Alex Stankus"]],
+ ["Rush",["Kavi Seidman","Aaron Reimer","Henry Leavenworth"]],["Risk",["Justin Tella","Mason Morris"]],
+ ["Social",["Henry Crabtree","Nizhoni Deschene","Aaron Rome"]],["Housing Manager",["Mateo Espinoza"]],
+ ["Alumni",["Logan Hardy"]],["New Member Educator",["Armand Khchirian"]],["IFC Coordinator",["Rory Bushong"]],
+ ["Social Media",["Phoenix Ho"]],["Retreat",["Brandon Fraser"]],["Philanthropy",["Jamison Wu"]]
+].map(([pos,people])=>({pos,people}));
+
+const GREEK = [["Alpha","Α α"],["Beta","Β β"],["Gamma","Γ γ"],["Delta","Δ δ"],["Epsilon","Ε ε"],["Zeta","Ζ ζ"],["Eta","Η η"],["Theta","Θ θ"],["Iota","Ι ι"],["Kappa","Κ κ"],["Lambda","Λ λ"],["Mu","Μ μ"],["Nu","Ν ν"],["Xi","Ξ ξ"],["Omicron","Ο ο"],["Pi","Π π"],["Rho","Ρ ρ"],["Sigma","Σ σ"],["Tau","Τ τ"],["Upsilon","Υ υ"],["Phi","Φ φ"],["Chi","Χ χ"],["Psi","Ψ ψ"],["Omega","Ω ω"]].map(([n,s])=>({n,s}));
+
+const CREED = `To bind men together in a brotherhood based upon eternal and immutable principles,
+with a bond as strong as right itself and as lasting as humanity;
+to know no North, no South, no East, no West, but to know man as man;
+to teach that true men the world over should stand together and contend for supremacy of good over evil;
+to teach, not politics, but morals;
+to foster, not partisanship, but the recognition of true merit wherever found;
+to have no narrower limits within which to work together for the elevation of man than the outlines of the world:
+these were the thoughts and hopes uppermost in the minds of the founders of the Alpha Tau Omega Fraternity.`;
+
+const HISTORY = [
+ {k:"Founded (date)", a:"September 11, 1865", d:["March 4, 1856","September 11, 1873","November 25, 1868"]},
+ {k:"Founded (city)", a:"Richmond, Virginia", d:["Lexington, Kentucky","Charlottesville, Virginia","Philadelphia, Pennsylvania"]},
+ {k:"Founded (school)", a:"Virginia Military Institute (VMI)", d:["University of Virginia","Washington and Lee","The Citadel"]},
+ {k:"Founders", a:"Otis Allan Glazebrook, Alfred Marshall, Erskine Mayo Ross", d:["Otis Allan Glazebrook, William Bennett, Frederick Berlin","Alfred Marshall, Erskine Mayo Ross, Robert E. Lee","Otis Allan Glazebrook, Alfred Marshall, John Wise"]},
+ {k:"Main founder / wrote the Creed", a:"Otis Allan Glazebrook", d:["Alfred Marshall","Erskine Mayo Ross","Frederick Berlin"]},
+ {k:"Why founded", a:"To reunite the North and South after the Civil War", d:["To support VMI cadets during the war","To create a literary debate society","To unite fraternities across Virginia"]},
+ {k:"Founding principles", a:"Christian, not Greek, principles", d:["Greek philosophical principles","Military honor code","Masonic principles"]},
+ {k:"Colors", a:"Azure and Gold", d:["Blue and White","Navy and Silver","Crimson and Gold"]},
+ {k:"Flower", a:"White Tea Rose", d:["Red Carnation","White Lily","Yellow Rose"]},
+ {k:"Creed written", a:"1880", d:["1865","1900","1892"]},
+];
+const HIST_ID = {"Founded (date)":"When was ATΩ founded?","Founded (city)":"In what city was ATΩ founded?","Founded (school)":"ATΩ was founded by cadets of which school?","Founders":"Who are the three founders?","Main founder / wrote the Creed":"Which founder wrote the Creed and led the founding?","Why founded":"Why was ATΩ founded?","Founding principles":"ATΩ was founded upon…","Colors":"What are the official colors?","Flower":"What is the official flower?","Creed written":"What year was the Creed written?"};
+
+/* ===================== STORAGE ===================== */
+const LS = {get(k,d){try{const v=localStorage.getItem("ato_"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+            set(k,v){try{localStorage.setItem("ato_"+k,JSON.stringify(v))}catch(e){}}};
+let BOX = LS.get("boxes",{});
+const box = id => BOX[id]||0;
+function grade(id,ok){BOX[id]= ok?Math.min(5,box(id)+1):0; LS.set("boxes",BOX)}
+
+/* ===================== HELPERS ===================== */
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle = a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const sample = (a,n)=>shuffle(a).slice(0,n);
+const norm = s=>String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+const close = (a,b)=>{a=norm(a);b=norm(b);return a===b||lev(a,b)<=Math.max(1,Math.floor(b.length/7))};
+// match a typed name against a pool: full name, or unique first / last name
+function matchName(input,pool){
+  const t=norm(input); if(!t) return null;
+  let hit=pool.find(p=>close(t,p)); if(hit) return hit;
+  const byFirst=pool.filter(p=>close(t,norm(p).split(" ")[0])); if(byFirst.length===1) return byFirst[0];
+  const byLast=pool.filter(p=>{const w=norm(p).split(" ");return close(t,w.slice(1).join(" "))||close(t,w[w.length-1])}); if(byLast.length===1) return byLast[0];
+  return null;
+}
+
+/* ===================== QUESTION DECKS (all multiple choice, Leitner-tracked) ===================== */
+const DECKS = {
+ members:{label:"Who's in which class", build(){return ALL.map(p=>({id:"m:"+p.name,prompt:`Which pledge class is <b>${esc(p.name)}</b> in?`,options:ORDER.slice(),answer:p.cls,note:[p.major,p.home].filter(Boolean).join(" · "),keepOrder:true}))}},
+ whois:{label:"Know your brothers", build(){return ALL.filter(p=>p.major||p.home).map(p=>{const cls=CLASSES.find(c=>c.name===p.cls).members.filter(x=>x.name!==p.name);return {id:"w:"+p.name,prompt:`${esc(p.cls)} · ${esc([p.major,p.home&&("from "+p.home)].filter(Boolean).join(" · "))}`,sub:"Who is this?",options:shuffle([p.name,...sample(cls,3).map(x=>x.name)]),answer:p.name}})}},
+ exec:{label:"Exec board", build(){const qs=[];EXEC.forEach(e=>{const ans=e.people.join(", ");const others=sample(EXEC.filter(x=>x!==e),3).map(x=>x.people.join(", "));qs.push({id:"e:"+e.pos,prompt:`Who holds <b>${esc(e.pos)}</b>?`,options:shuffle([ans,...others]),answer:ans});e.people.forEach(p=>qs.push({id:"ep:"+p,prompt:`What exec position does <b>${esc(p)}</b> hold?`,options:shuffle([e.pos,...sample(EXEC.filter(x=>x!==e),3).map(x=>x.pos)]),answer:e.pos,note:"Pledge class: "+((ALL.find(x=>x.name===p)||{}).cls||"?")}))});return qs}},
+ greek:{label:"Greek alphabet", build(){const qs=[];GREEK.forEach((g,i)=>{if(i<23){const nx=GREEK[i+1].n;qs.push({id:"gn:"+g.n,prompt:`What letter comes right after <b>${g.n}</b>?`,options:shuffle([nx,...sample(GREEK.filter(x=>x.n!==nx&&x.n!==g.n),3).map(x=>x.n)]),answer:nx})}
+   if(i>0){const pv=GREEK[i-1].n;qs.push({id:"gp:"+g.n,prompt:`What letter comes right before <b>${g.n}</b>?`,options:shuffle([pv,...sample(GREEK.filter(x=>x.n!==pv&&x.n!==g.n),3).map(x=>x.n)]),answer:pv})}
+   qs.push({id:"gs:"+g.n,prompt:`<span style="font-family:Georgia,serif;font-size:34px">${g.s}</span>`,sub:"Name this letter",options:shuffle([g.n,...sample(GREEK.filter(x=>x!==g),3).map(x=>x.n)]),answer:g.n})});return qs}},
+ history:{label:"ATΩ history", build(){return HISTORY.map(h=>({id:"h:"+h.k,prompt:HIST_ID[h.k],options:shuffle([h.a,...h.d]),answer:h.a}))}},
+ creed:{label:"Creed — next line", build(){const L=CREED.split("\n");return L.slice(0,-1).map((l,i)=>({id:"c:"+i,prompt:`“…${esc(l)}”`,sub:"What comes next?",options:shuffle([L[i+1],...sample(L.filter((_,j)=>j!==i+1&&j!==i),3)]),answer:L[i+1]}))}},
+ order:{label:"Class order", build(){const qs=[];ORDER.forEach((c,i)=>{if(i<4)qs.push({id:"o:"+c,prompt:`Which class came right <b>before</b> ${c} (one older)?`,options:ORDER.filter(x=>x!==c),answer:ORDER[i+1],keepOrder:true})});return qs}},
+};
+function pick(deckKeys,last){
+  const pool=deckKeys.flatMap(k=>DECKS[k].build());
+  let cand=pool.filter(q=>q.id!==last);
+  const minBox=Math.min(...cand.map(q=>box(q.id)));
+  // prefer weakest items, with some randomness
+  const weighted=cand.flatMap(q=>Array(Math.max(1,6-box(q.id)+(box(q.id)===minBox?3:0))).fill(q));
+  return weighted[Math.random()*weighted.length|0];
+}
+function deckMastery(k){const qs=DECKS[k].build();return qs.reduce((s,q)=>s+box(q.id),0)/(qs.length*5)}
+
+/* ===================== MC CARD (shared) ===================== */
+function mcCard(el,{getQ,onDone,label,counter}){
+  let q, last=null, streak=0, seen=0, right=0;
+  function show(){
+    q=getQ(last); last=q.id;
+    el.innerHTML=`<div class="card"><div class="meta"><span>${esc(label)}</span><span>${counter?counter():`${right}/${seen} · streak ${streak}`}</span></div>
+      <div class="q">${q.prompt}</div>${q.sub?`<div class="qsub">${q.sub}</div>`:""}
+      <div class="opts">${q.options.map((o,i)=>`<button class="opt" data-i="${i}">${esc(o)}</button>`).join("")}</div>
+      <div id="fb"></div></div>`;
+    el.querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(b));
+  }
+  function answer(b){
+    const ok=q.options[+b.dataset.i]===q.answer; seen++; if(ok){right++;streak++}else streak=0;
+    grade(q.id,ok);
+    el.querySelectorAll(".opt").forEach(x=>{x.disabled=true;if(q.options[+x.dataset.i]===q.answer)x.classList.add("right")});
+    if(!ok)b.classList.add("wrong");
+    const fb=el.querySelector("#fb");
+    fb.innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"Correct.":"Answer: <b>"+esc(q.answer)+"</b>"}${q.note?` <span class="hint">· ${esc(q.note)}</span>`:""}</div>
+      <div class="row" style="margin-top:12px"><button class="btn" id="nx">Next</button></div>`;
+    if(onDone&&onDone(q,ok)===false) return;
+    const nx=el.querySelector("#nx"); nx.onclick=show; nx.focus();
+  }
+  show();
+}
+
+/* ===================== VIEWS ===================== */
+const VIEWS = [
+ ["home","Home"],["classes","Pledge classes"],["exec","Exec"],["greek","Greek"],["creed","Creed"],["songs","Chant & Song"],["history","History"],["exam","Mock midterm"]
+];
+let current = LS.get("view","home");
+function nav(){
+  $("#rail").innerHTML=VIEWS.map(([k,l])=>`<button data-v="${k}" aria-current="${k===current}">${l}</button>`).join("");
+  $("#rail").querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.v));
+}
+function go(v){current=v;LS.set("view",v);nav();render();window.scrollTo({top:0})}
+function render(){({home,classes,exec,greek,creed,songs,history,exam})[current]()}
+function modes(list,key,def){
+  const cur=LS.get("mode_"+key,def);
+  const html=`<div class="modes">${list.map(([k,l])=>`<button data-m="${k}" aria-pressed="${k===cur}">${l}</button>`).join("")}</div><div id="stage"></div>`;
+  return {html,cur,wire(fn){document.querySelectorAll(".modes button").forEach(b=>b.onclick=()=>{LS.set("mode_"+key,b.dataset.m);render()});fn(cur,$("#stage"))}};
+}
+
+/* ---------- HOME ---------- */
+function home(){
+  const rows=[["Class order","order"],["Class members","members"],["Brothers","whois"],["Exec","exec"],["Greek","greek"],["Creed","creed"],["History","history"]];
+  const best=LS.get("examBest",null);
+  $("#main").innerHTML=`
+  <h2>How to use this</h2>
+  <p class="hint">Everything here is built on active recall: you try to pull the answer out of your head before you see it, and the questions you miss come back more often. Progress saves on your own device, so every PC member can open the same link.</p>
+  <h3>Study plan until Sunday</h3>
+  <ol class="plan">
+    <li><div><b>Today:</b> Greek alphabet speed run until you're under 60s, then Class order. These are the backbone for everything else.</div></li>
+    <li><div><b>Thu:</b> Creed in chunks. Read → Fade → First letters → Recite, one line at a time, then the whole thing. Same for the chant and Old Alpha.</div></li>
+    <li><div><b>Fri:</b> Recite each pledge class from memory. Start with Lambda and Mu (smallest), finish with Omicron.</div></li>
+    <li><div><b>Sat:</b> Exec recall + History. Quiz each other out loud: one person reads a position, the other names the brother.</div></li>
+    <li><div><b>Sun morning:</b> Two mock midterms. Re-drill anything you missed, then recite the creed and songs once out loud.</div></li>
+  </ol>
+  <h3>Your mastery</h3>
+  <div class="card mastery">${rows.map(([l,k])=>{const v=Math.round(deckMastery(k)*100);return `<div class="mrow"><span>${l}</span><div class="bar"><i style="width:${v}%"></i></div><b>${v}%</b></div>`}).join("")}
+  <div class="row" style="justify-content:space-between;margin-top:6px"><span class="hint">Mock midterm best: <b>${best==null?"not taken yet":best+"%"}</b> · Greek best: <b>${LS.get("greekBest",null)?fmt(LS.get("greekBest")):"—"}</b></span>
+  <button class="btn gold" id="goExam">Take a mock midterm</button></div></div>
+  <p class="hint" style="margin-top:14px">Spot something wrong (spelling, exec change)? Tell Emilio so it gets fixed for everyone.</p>`;
+  $("#goExam").onclick=()=>go("exam");
+}
+
+/* ---------- CLASSES ---------- */
+function classes(){
+  const M=modes([["order","Order the classes"],["recite","Recite a class"],["which","Name → class"],["whois","Who is this?"],["list","Roster"]],"classes","order");
+  $("#main").innerHTML=`<h2>Pledge classes</h2><p class="hint">Newest to oldest: ${ORDER.join(" → ")}. ${ALL.length} brothers total.</p>`+M.html;
+  M.wire((m,st)=>{
+    if(m==="order") orderDrill(st);
+    if(m==="recite") reciteClass(st);
+    if(m==="which") mcCard(st,{label:"Which class?",getQ:l=>pick(["members"],l)});
+    if(m==="whois") mcCard(st,{label:"Major + hometown → name",getQ:l=>pick(["whois"],l)});
+    if(m==="list") roster(st);
+  });
+}
+function orderDrill(st){
+  let picked=[], misses=0; const chips=shuffle(ORDER);
+  function draw(){
+    st.innerHTML=`<div class="card"><div class="q">Tap the classes in order, newest → oldest</div>
+    <div class="order-slots">${ORDER.map((_,i)=>`<div class="slot ${picked[i]?"filled":""}">${picked[i]||i+1}</div>`).join("")}</div>
+    <div class="row">${chips.filter(c=>!picked.includes(c)).map(c=>`<button class="btn ghost" data-c="${c}">${c}</button>`).join("")}</div>
+    <div id="fb"></div></div>`;
+    st.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
+      if(b.dataset.c===ORDER[picked.length]){picked.push(b.dataset.c)}else{misses++;b.classList.add("opt","wrong");setTimeout(draw,350);return}
+      draw();
+      if(picked.length===5){grade("ord:all",misses===0);st.querySelector("#fb").innerHTML=`<div class="feedback ${misses?"bad":"good"}">${misses?misses+" wrong tap(s). Run it again until it's clean.":"Clean run."}</div><div class="row" style="margin-top:10px"><button class="btn" id="again">Again</button></div>`;st.querySelector("#again").onclick=()=>orderDrill(st)}
+    });
+  }
+  draw();
+  if(document.getElementById("orderMc")) return;
+  const extra=document.createElement("div");extra.style.marginTop="14px";st.after(extra);
+  extra.id="orderMc"; mcCard(extra,{label:"Which came before?",getQ:l=>pick(["order"],l)});
+}
+function reciteClass(st){
+  const sel=LS.get("reciteCls","Lambda");
+  const c=CLASSES.find(x=>x.name===sel); const names=c.members.map(p=>p.name);
+  let found=[]; let wrong=[];
+  st.innerHTML=`<div class="chunks">${ORDER.map(n=>`<button data-k="${n}" aria-pressed="${n===sel}">${n} (${CLASSES.find(x=>x.name===n).members.length})</button>`).join("")}</div>
+  <div class="card"><div class="q">Name every ${sel}</div><div class="qsub">Type a name and press Enter. First or last name works if it's unique. Spelling can be a little off.</div>
+  <input type="text" id="rin" autocomplete="off" placeholder="e.g. ${esc(names[0].split(" ")[0])}…">
+  <div class="meta" style="margin-top:10px"><span id="rc">0 / ${names.length}</span><span id="rmsg"></span></div>
+  <div class="pills" id="rfound"></div>
+  <div class="row" style="margin-top:14px"><button class="btn ghost" id="rgive">Show the ones I missed</button><button class="btn ghost" id="rreset">Restart</button></div>
+  <div id="rmiss"></div></div>`;
+  st.querySelectorAll(".chunks button").forEach(b=>b.onclick=()=>{LS.set("reciteCls",b.dataset.k);reciteClass(st)});
+  const inp=st.querySelector("#rin");
+  inp.onkeydown=e=>{if(e.key!=="Enter")return;const v=inp.value;inp.value="";
+    const hit=matchName(v,names.filter(n=>!found.includes(n)));
+    const msg=st.querySelector("#rmsg");
+    if(hit){found.push(hit);grade("m:"+hit,true);msg.textContent="✓ "+hit}
+    else if(matchName(v,found)){msg.textContent="Already got that one"}
+    else{const other=matchName(v,ALL.map(p=>p.name));msg.textContent=other?`${other} is ${ALL.find(p=>p.name===other).cls}, not ${sel}`:"Not a "+sel}
+    st.querySelector("#rc").textContent=`${found.length} / ${names.length}`;
+    st.querySelector("#rfound").innerHTML=found.map(n=>`<span class="pill">${esc(n)}</span>`).join("");
+    if(found.length===names.length){msg.textContent="All of them. Try the next class.";LS.set("reciteBest_"+sel,names.length)}
+  };
+  st.querySelector("#rgive").onclick=()=>{const miss=names.filter(n=>!found.includes(n));miss.forEach(n=>grade("m:"+n,false));
+    st.querySelector("#rmiss").innerHTML=miss.length?`<h3>Missed (${miss.length})</h3><div class="pills">${miss.map(n=>`<span class="pill miss">${esc(n)}</span>`).join("")}</div>`:`<p class="feedback good">Nothing missed.</p>`};
+  st.querySelector("#rreset").onclick=()=>reciteClass(st);
+  inp.focus();
+}
+function roster(st){
+  st.innerHTML=`<p class="hint">Tap a blurred name to reveal it. Cover-and-recall works better than re-reading.</p>
+  <div class="row" style="margin-bottom:10px"><button class="btn ghost" id="blurT">Toggle blur</button></div>`+
+  CLASSES.map(c=>`<h3>${c.name} · ${c.members.length}</h3><div class="tablewrap card" style="padding:4px 10px"><table><thead><tr><th>Name</th><th>Major</th><th>From</th></tr></thead><tbody>${c.members.map(p=>`<tr><td><span class="nm">${esc(p.name)}</span></td><td>${esc(p.major||"—")}</td><td>${esc(p.home||"—")}</td></tr>`).join("")}</tbody></table></div>`).join("");
+  let blur=false;
+  st.querySelector("#blurT").onclick=()=>{blur=!blur;st.querySelectorAll(".nm").forEach(n=>n.classList.toggle("hidecell",blur))};
+  st.querySelectorAll(".nm").forEach(n=>n.onclick=()=>n.classList.remove("hidecell"));
+}
+
+/* ---------- EXEC ---------- */
+function exec(){
+  const M=modes([["recite","Recite the board"],["flash","Flashcards"],["list","Board"]],"exec","recite");
+  $("#main").innerHTML=`<h2>Exec board</h2><p class="hint">${EXEC.length} positions, ${EXEC.reduce((s,e)=>s+e.people.length,0)} people.</p>`+M.html;
+  M.wire((m,st)=>{
+    if(m==="flash") mcCard(st,{label:"Exec",getQ:l=>pick(["exec"],l)});
+    if(m==="list") st.innerHTML=`<div class="card tablewrap"><table><thead><tr><th>Position</th><th>Brother(s)</th></tr></thead><tbody>${EXEC.map(e=>`<tr><td>${e.pos}</td><td><span class="nm hidecell">${e.people.join(", ")}</span></td></tr>`).join("")}</tbody></table></div><p class="hint" style="margin-top:8px">Tap a cell to reveal.</p>`,
+      st.querySelectorAll(".nm").forEach(n=>n.onclick=()=>n.classList.remove("hidecell"));
+    if(m==="recite"){
+      st.innerHTML=`<div class="card"><div class="qsub">Fill in every position, then check. Separate multiple people with commas. First names are fine if unique.</div>
+      <div style="display:grid;gap:10px">${EXEC.map((e,i)=>`<label style="display:grid;gap:4px"><span style="font-weight:600;font-size:14px">${e.pos}${e.people.length>1?` <span class="hint">(${e.people.length} people)</span>`:""}</span><input type="text" id="ex${i}" autocomplete="off"><span id="exr${i}" class="hint"></span></label>`).join("")}</div>
+      <div class="row" style="margin-top:14px"><button class="btn" id="exc">Check</button><button class="btn ghost" id="exx">Clear</button></div><div id="exs"></div></div>`;
+      st.querySelector("#exx").onclick=()=>exec();
+      st.querySelector("#exc").onclick=()=>{let tot=0,ok=0;
+        EXEC.forEach((e,i)=>{const parts=st.querySelector("#ex"+i).value.split(/,|&|\band\b/).map(s=>s.trim()).filter(Boolean);
+          const left=e.people.slice();parts.forEach(p=>{const h=matchName(p,left);if(h)left.splice(left.indexOf(h),1)});
+          const good=e.people.length-left.length;tot+=e.people.length;ok+=good;grade("e:"+e.pos,left.length===0);
+          const r=st.querySelector("#exr"+i);r.innerHTML=left.length?`<span style="color:var(--bad)">✗ ${esc(e.people.join(", "))}</span>`:`<span style="color:var(--good)">✓</span>`});
+        st.querySelector("#exs").innerHTML=`<div class="feedback ${ok===tot?"good":"bad"}">${ok} / ${tot} names correct.</div>`};
+    }
+  });
+}
+
+/* ---------- GREEK ---------- */
+function fmt(ms){const s=ms/1000;return s.toFixed(1)+"s"}
+function greek(){
+  const M=modes([["speed","Speed run"],["flash","Flashcards"],["chart","Chart"]],"greek","speed");
+  $("#main").innerHTML=`<h2>Greek alphabet</h2><p class="hint">24 letters. Your pledge classes count backward through it: Omicron ← Xi ← Nu ← Mu ← Lambda.</p>`+M.html;
+  M.wire((m,st)=>{
+    if(m==="flash") mcCard(st,{label:"Greek",getQ:l=>pick(["greek"],l)});
+    if(m==="chart"){st.innerHTML=`<div class="card"><div class="greekgrid">${GREEK.map(g=>`<div class="gl"><div class="s">${g.s}</div><div class="n">${g.n}</div></div>`).join("")}</div></div>`}
+    if(m==="speed") greekSpeed(st);
+  });
+}
+function greekSpeed(st){
+  let i=0,t0=null,pen=0,timer;
+  const best=LS.get("greekBest",null);
+  st.innerHTML=`<div class="card"><div class="meta"><span>Type each letter in order. It advances on its own.</span><span>Best: ${best?fmt(best):"—"}</span></div>
+  <div class="row" style="justify-content:space-between;margin-bottom:10px"><span class="big" id="gt">0.0s</span><button class="btn ghost" id="gpeek">Peek (+5s)</button></div>
+  <input type="text" id="gin" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Start with Alpha…">
+  <div class="greekgrid" id="gg" style="margin-top:14px"></div><div id="gfb"></div></div>`;
+  const gg=st.querySelector("#gg"), inp=st.querySelector("#gin");
+  const draw=()=>{gg.innerHTML=GREEK.map((g,j)=>`<div class="gl ${j<i?"done":j===i?"next hidden":"hidden"}"><div class="s">${g.s}</div><div class="n">${g.n}</div></div>`).join("")};
+  draw();
+  const tick=()=>{st.querySelector("#gt").textContent=fmt(Date.now()-t0+pen)};
+  inp.oninput=()=>{
+    if(!t0){t0=Date.now();timer=setInterval(tick,100)}
+    if(norm(inp.value)===norm(GREEK[i].n)){i++;inp.value="";draw();
+      if(i===24){clearInterval(timer);const t=Date.now()-t0+pen;tick();inp.disabled=true;
+        const nb=!best||t<best;if(nb)LS.set("greekBest",t);
+        st.querySelector("#gfb").innerHTML=`<div class="feedback good">Done in ${fmt(t)}${nb?" · new best":""}. Goal: under 45s.</div><div class="row" style="margin-top:10px"><button class="btn" id="gag">Again</button></div>`;
+        st.querySelector("#gag").onclick=()=>greekSpeed(st)}}
+  };
+  st.querySelector("#gpeek").onclick=()=>{if(i>=24)return;pen+=5000;if(!t0){t0=Date.now();timer=setInterval(tick,100)}const c=gg.children[i];c.classList.remove("hidden");inp.focus()};
+  inp.focus();
+}
+
+/* ---------- MEMORIZER (creed, chant, song) ---------- */
+function memorizer(st,key,text){
+  const lines=text.split("\n").map(s=>s.trim()).filter(Boolean);
+  const lvl=LS.get("mlvl_"+key,"read"); let chunk=LS.get("mchunk_"+key,"all"); if(chunk!=="all"&&+chunk>=lines.length)chunk="all";
+  const sel=chunk==="all"?lines:[lines[+chunk]];
+  const LV=[["read","1 · Read"],["fade","2 · Fade"],["initials","3 · First letters"],["recite","4 · Recite"]];
+  let seed=LS.get("mseed",1);
+  const hideWord=(li,wi)=>((li*31+wi*17+seed*13)%10)<5;
+  let body="";
+  if(lvl==="read") body=`<div class="text">${sel.map(l=>`<p class="ln">${esc(l)}</p>`).join("")}</div><p class="hint">Read it out loud twice, then move to Fade.</p>`;
+  if(lvl==="fade") body=`<div class="text">${sel.map((l,li)=>`<p class="ln">${l.split(/\s+/).map((w,wi)=>hideWord(li,wi)?`<span class="blank" tabindex="0">${esc(w)}</span>`:esc(w)).join(" ")}</p>`).join("")}</div><div class="row"><button class="btn ghost" id="reroll">Hide different words</button><span class="hint">Say it out loud. Tap a blank to peek.</span></div>`;
+  if(lvl==="initials") body=`<div class="text ini">${sel.map(l=>`<p class="ln">${esc(l.split(/\s+/).map(w=>w.replace(/[A-Za-z'’]+/,m=>m[0])).join(" "))}</p>`).join("")}</div><p class="hint">Only first letters. Say every word from memory.</p>`;
+  if(lvl==="recite") body=`<textarea id="rt" placeholder="Type it from memory. Punctuation and capitals don't count."></textarea><div class="row" style="margin-top:10px"><button class="btn" id="chk">Check</button><span class="hint">Best: ${LS.get("mbest_"+key+"_"+chunk,null)??"—"}${LS.get("mbest_"+key+"_"+chunk,null)!=null?"%":""}</span></div><div id="diff"></div>`;
+  st.innerHTML=`<div class="chunks"><button data-ch="all" aria-pressed="${chunk==="all"}">Whole thing</button>${lines.map((_,i)=>`<button data-ch="${i}" aria-pressed="${String(i)===String(chunk)}">Line ${i+1}</button>`).join("")}</div>
+  <div class="modes" style="margin-top:0">${LV.map(([k,l])=>`<button data-l="${k}" aria-pressed="${k===lvl}">${l}</button>`).join("")}</div>
+  <div class="card">${body}</div>`;
+  st.querySelectorAll("[data-ch]").forEach(b=>b.onclick=()=>{LS.set("mchunk_"+key,b.dataset.ch);memorizer(st,key,text)});
+  st.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{LS.set("mlvl_"+key,b.dataset.l);memorizer(st,key,text)});
+  st.querySelectorAll(".blank").forEach(b=>{b.onclick=()=>b.classList.toggle("show");b.onkeydown=e=>{if(e.key==="Enter")b.classList.toggle("show")}});
+  const rr=st.querySelector("#reroll"); if(rr) rr.onclick=()=>{LS.set("mseed",seed+1);memorizer(st,key,text)};
+  const ck=st.querySelector("#chk"); if(ck) ck.onclick=()=>{
+    const target=sel.join(" ").split(/\s+/), tn=target.map(norm), typed=norm(st.querySelector("#rt").value).split(" ").filter(Boolean);
+    const n=tn.length,m=typed.length,D=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+    for(let a=n-1;a>=0;a--)for(let b=m-1;b>=0;b--)D[a][b]=tn[a]===typed[b]?D[a+1][b+1]+1:Math.max(D[a+1][b],D[a][b+1]);
+    let a=0,b=0,out=[],hits=0;
+    while(a<n||b<m){if(a<n&&b<m&&tn[a]===typed[b]){out.push(`<span class="ok">${esc(target[a])}</span>`);hits++;a++;b++}
+      else if(b<m&&(a>=n||D[a][b+1]>=D[a+1][b])){out.push(`<span class="extra">${esc(typed[b])}</span>`);b++}
+      else{out.push(`<span class="miss">${esc(target[a])}</span>`);a++}}
+    const extras=m-hits, pct=Math.max(0,Math.round(100*(hits-extras*0.5)/n));
+    const prev=LS.get("mbest_"+key+"_"+chunk,0); if(pct>prev)LS.set("mbest_"+key+"_"+chunk,pct);
+    if(key==="creed") sel.forEach(l=>{const i=lines.indexOf(l);if(i>0)grade("c:"+(i-1),pct>=95)});
+    st.querySelector("#diff").innerHTML=`<div class="feedback ${pct>=95?"good":"bad"}">${pct}% · ${hits}/${n} words${extras?` · ${extras} extra`:""}</div>
+    <div class="text diff" style="margin-top:10px">${out.join(" ")}</div>
+    <p class="hint"><span style="color:var(--good)">green</span> = right · <span style="color:var(--bad);text-decoration:underline">red</span> = missed · <s>struck</s> = you added it</p>`;
+  };
+}
+function creed(){
+  $("#main").innerHTML=`<h2>The Creed</h2><p class="hint">Otis Allan Glazebrook, 1880. Work one line at a time through all four levels, then the whole thing. 100% on Recite is the goal.</p><div id="stage"></div><h3>Quick check</h3><div id="cq"></div>`;
+  memorizer($("#stage"),"creed",CREED);
+  mcCard($("#cq"),{label:"What comes next?",getQ:l=>pick(["creed"],l)});
+}
+
+/* ---------- SONGS ---------- */
+const SONGS={
+  chant:{title:"Ruh rah rega chant",starter:"Ruh rah rega, Alpha Tau Omega…"},
+  alpha:{title:"Old Alpha",starter:"Old Alpha, how we love you, through and through…"}
+};
+function songs(){
+  const M=modes([["chant","Ruh rah rega"],["alpha","Old Alpha"]],"songs","chant");
+  $("#main").innerHTML=`<h2>Chant & Old Alpha</h2>`+M.html;
+  M.wire((m,st)=>{
+    const s=SONGS[m]; const saved=LS.get("text_"+m,"");
+    const editing=LS.get("edit_"+m,false)||!saved;
+    if(editing){
+      st.innerHTML=`<div class="card"><div class="q">${s.title}: paste the words</div>
+      <div class="qsub">Paste or type the exact words your chapter uses, one line per line. They save on this device. Send them to Emilio and they can be built into the page for the whole PC.</div>
+      <textarea id="sw" placeholder="${esc(s.starter)}">${esc(saved)}</textarea>
+      <div class="row" style="margin-top:10px"><button class="btn" id="ssave">Save and start drilling</button>${saved?`<button class="btn ghost" id="scancel">Cancel</button>`:""}</div></div>`;
+      st.querySelector("#ssave").onclick=()=>{const v=st.querySelector("#sw").value.trim();if(!v)return;LS.set("text_"+m,v);LS.set("edit_"+m,false);render()};
+      const c=st.querySelector("#scancel"); if(c) c.onclick=()=>{LS.set("edit_"+m,false);render()};
+    } else {
+      const holder=document.createElement("div"); st.appendChild(holder);
+      memorizer(holder,"song_"+m,saved);
+      const e=document.createElement("div");e.className="row";e.style.marginTop="10px";e.innerHTML=`<button class="btn ghost">Edit the words</button>`;st.appendChild(e);
+      e.querySelector("button").onclick=()=>{LS.set("edit_"+m,true);render()};
+    }
+  });
+}
+
+/* ---------- HISTORY ---------- */
+function history(){
+  const M=modes([["flash","Quiz"],["facts","Fact sheet"]],"history","flash");
+  $("#main").innerHTML=`<h2>ATΩ history</h2>`+M.html;
+  M.wire((m,st)=>{
+    if(m==="flash") mcCard(st,{label:"History",getQ:l=>pick(["history"],l)});
+    if(m==="facts") st.innerHTML=`<div class="card"><dl class="fact">${HISTORY.map(h=>`<dt>${h.k}</dt><dd><span class="nm hidecell">${esc(h.a)}</span></dd>`).join("")}</dl>
+    <p class="hint" style="margin-top:8px">Tap to reveal. Bonus: the founders met and signed the constitution at 114 E. Clay St. in Richmond. ATΩ was the first fraternity founded after the Civil War.</p></div>`,
+      st.querySelectorAll(".nm").forEach(n=>n.onclick=()=>n.classList.remove("hidecell"));
+  });
+}
+
+/* ---------- MOCK MIDTERM ---------- */
+function exam(){
+  const mix={order:3,members:5,whois:2,exec:5,greek:4,history:5,creed:3};
+  let qs=[];Object.entries(mix).forEach(([k,n])=>qs.push(...sample(DECKS[k].build(),n)));
+  qs=shuffle(qs); let idx=0,right=0,misses=[];
+  $("#main").innerHTML=`<h2>Mock midterm</h2><p class="hint">${qs.length} mixed questions across everything. Best so far: ${LS.get("examBest",null)??"—"}${LS.get("examBest",null)!=null?"%":""}</p><div id="stage"></div>`;
+  const st=$("#stage");
+  mcCard(st,{label:"Mock midterm",counter:()=>`Q ${idx+1} / ${qs.length}`,getQ:()=>qs[idx],
+    onDone:(q,ok)=>{if(ok)right++;else misses.push(q);idx++;
+      if(idx>=qs.length){const pct=Math.round(100*right/qs.length);if(window.__atoExamDone)window.__atoExamDone(pct);const b=LS.get("examBest",0);if(pct>b)LS.set("examBest",pct);
+        const nx=st.querySelector("#nx");nx.textContent="See results";nx.onclick=()=>{
+        st.innerHTML=`<div class="card"><div class="big">${pct}%</div><p>${right} / ${qs.length} correct${pct>b?" · new best":""}.</p>
+        ${misses.length?`<h3>Re-drill these</h3><div style="display:grid;gap:8px">${misses.map(q=>`<div class="feedback bad"><div>${q.prompt}${q.sub?" "+q.sub:""}</div><b>${esc(q.answer)}</b></div>`).join("")}</div>`:"<p>Perfect run.</p>"}
+        <div class="row" style="margin-top:14px"><button class="btn gold" id="retake">New midterm</button></div></div>`;
+        st.querySelector("#retake").onclick=exam};return false}}});
+}
+
+/* ===================== BOOT ===================== */
+(function(){
+  const d=new Date(),t=new Date(2026,9,18);const days=Math.ceil((new Date(t.getFullYear(),t.getMonth(),t.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
+  $("#countdown").textContent=days>1?`Midterm in ${days} days · Sun 10/18`:days===1?"Midterm tomorrow":days===0?"Midterm today":"Midterm: Sun 10/18";
+  if(!VIEWS.some(v=>v[0]===current))current="home";
+  nav();render();
+})();
+</script>
+
+<script>
+/* ===================== ao26 BRIDGE =====================
+   Only active when embedded by the site as /drill/index.html?me=<memberId>.
+   Standalone (no ?me) this does nothing. It never touches the quiz logic:
+   it watches LS.set and posts score patches to the parent window, which
+   writes them to Firestore under the logged-in member (best-of, never down). */
+(function(){
+  const me=new URLSearchParams(location.search).get("me");
+  if(!me||window.parent===window) return;
+  const post=patch=>{try{window.parent.postMessage({type:"ato-drill",memberId:me,patch,at:Date.now()},location.origin)}catch(e){}};
+  const DECK_KEYS=["order","members","whois","exec","greek","creed","history"];
+  const mastery=()=>{const o={};DECK_KEYS.forEach(k=>o[k]=Math.round(deckMastery(k)*100));return o};
+  // Mastery changes on every answer; post it at most once per 5 s (trailing).
+  let mTimer=null,mDirty=false;
+  const postMastery=()=>{mDirty=true;if(mTimer)return;mTimer=setTimeout(()=>{mTimer=null;if(mDirty){mDirty=false;post({mastery:mastery()})}},5000)};
+  const origSet=LS.set.bind(LS);
+  LS.set=(k,v)=>{origSet(k,v);
+    if(k==="examBest")post({examBest:Math.round(v)});
+    else if(k==="greekBest")post({greekBestMs:Math.round(v)});
+    else if(k==="boxes")postMastery();
+    else if(k==="mbest_creed_all")post({creedBest:Math.round(v)});
+  };
+  // Called by exam() with the score of every finished mock midterm, best or not.
+  window.__atoExamDone=pct=>post({examLast:Math.round(pct),examAttempts:1});
+  // On load, sync anything already earned on this device (e.g. from using the page standalone).
+  const init={};
+  const eb=LS.get("examBest",null); if(typeof eb==="number")init.examBest=Math.round(eb);
+  const gb=LS.get("greekBest",null); if(typeof gb==="number")init.greekBestMs=Math.round(gb);
+  const cb=LS.get("mbest_creed_all",null); if(typeof cb==="number")init.creedBest=Math.round(cb);
+  const m=mastery(); if(DECK_KEYS.some(k=>m[k]>0))init.mastery=m;
+  if(Object.keys(init).length)post(init);
+})();
+</script>
+
+</body></html>

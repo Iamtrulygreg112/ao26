@@ -11,6 +11,8 @@ import { formatEventDate, isUpcoming, todayISO } from "@/lib/dates";
 import { rankOf } from "@/lib/standings";
 import { addWorkEntry, errorText } from "@/lib/writes";
 import { isLinked, useLinkedAccount } from "@/lib/linkData";
+import { useDrillScores } from "@/lib/drillData";
+import { TRACKED_MEMBERS } from "@/lib/config";
 import EventCard, { WeightPill } from "@/components/EventCard";
 import { CoveringPill } from "@/components/Roster";
 import VetoButton from "@/components/VetoButton";
@@ -56,6 +58,25 @@ function SignalLinkCard({ memberId }: { memberId: string }) {
         Link Signal
       </Link>
     </div>
+  );
+}
+
+/** "Midterm Sun 10/18 · your best · class avg" → scoreboard. */
+function DrillCard({ memberId }: { memberId: string }) {
+  const { scores, loaded } = useDrillScores();
+  if (!loaded) return null;
+  const mine = scores.get(memberId)?.examBest;
+  const bests = TRACKED_MEMBERS.map((m) => scores.get(m.id)?.examBest).filter((v): v is number => typeof v === "number");
+  const avg = bests.length ? Math.round(bests.reduce((a, b) => a + b, 0) / bests.length) : null;
+  return (
+    <Link href="/drill/board" className="block rounded-xl border border-border bg-surface px-4 py-3 transition hover:bg-surface2 active:bg-surface2">
+      <p className="text-xs uppercase tracking-widest text-muted">Midterm Sun 10/18</p>
+      <p className="mt-1 text-sm tabular-nums">
+        your best: <span className={typeof mine === "number" ? "font-semibold text-gold" : "text-muted"}>{typeof mine === "number" ? `${mine}%` : "—"}</span>
+        <span className="text-muted"> · class avg </span>
+        <span className="font-medium">{avg === null ? "—" : `${avg}%`}</span>
+      </p>
+    </Link>
   );
 }
 
@@ -108,6 +129,7 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       {me && <SignalLinkCard memberId={me} />}
+      {me && <DrillCard memberId={me} />}
 
       <section className="space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">Hi {session?.name}</h1>
