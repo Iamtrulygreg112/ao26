@@ -238,7 +238,7 @@ const GREEK = [["Alpha","Α α"],["Beta","Β β"],["Gamma","Γ γ"],["Delta","Δ
 
 const CREED = `To bind men together in a brotherhood based upon eternal and immutable principles,
 with a bond as strong as right itself and as lasting as humanity;
-to know no North, no South, no East, no West, but to know man as man;
+to know no North, no South, no East, no West, but to know man as man,
 to teach that true men the world over should stand together and contend for supremacy of good over evil;
 to teach, not politics, but morals;
 to foster, not partisanship, but the recognition of true merit wherever found;
@@ -272,8 +272,16 @@ const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;
 const shuffle = a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const sample = (a,n)=>shuffle(a).slice(0,n);
 const norm = s=>String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
-function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let pp=null,p=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++){c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));if(pp&&i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])c[j]=Math.min(c[j],pp[j-2]+1)}pp=p;p=c}return p[n]} // swapped letters count as one slip
 const close = (a,b)=>{a=norm(a);b=norm(b);return a===b||lev(a,b)<=Math.max(1,Math.floor(b.length/7))};
+// Exact (normalised) match only: full name, or a unique first / last name.
+function matchNameExact(input,pool){
+  const t=norm(input); if(!t) return null;
+  let hit=pool.find(p=>norm(p)===t); if(hit) return hit;
+  const byFirst=pool.filter(p=>norm(p).split(" ")[0]===t); if(byFirst.length===1) return byFirst[0];
+  const byLast=pool.filter(p=>{const w=norm(p).split(" ");return w.slice(1).join(" ")===t||w[w.length-1]===t}); if(byLast.length===1) return byLast[0];
+  return null;
+}
 // match a typed name against a pool: full name, or unique first / last name
 function matchName(input,pool){
   const t=norm(input); if(!t) return null;
@@ -403,9 +411,9 @@ function orderDrill(st){
 function reciteClass(st){
   const sel=LS.get("reciteCls","Lambda");
   const c=CLASSES.find(x=>x.name===sel); const names=c.members.map(p=>p.name);
-  let found=[]; let wrong=[];
+  let found=[]; let wrong=[]; let fixing=null; // fixing = the full name they must now type exactly
   st.innerHTML=`<div class="chunks">${ORDER.map(n=>`<button data-k="${n}" aria-pressed="${n===sel}">${n} (${CLASSES.find(x=>x.name===n).members.length})</button>`).join("")}</div>
-  <div class="card"><div class="q">Name every ${sel}</div><div class="qsub">Type a name and press Enter. First or last name works if it's unique. Spelling can be a little off.</div>
+  <div class="card"><div class="q">Name every ${sel}</div><div class="qsub">Type a name and press Enter. First or last name works if it's unique. Spelling has to be exact.</div>
   <input type="text" id="rin" autocomplete="off" placeholder="e.g. ${esc(names[0].split(" ")[0])}…">
   <div class="meta" style="margin-top:10px"><span id="rc">0 / ${names.length}</span><span id="rmsg"></span></div>
   <div class="pills" id="rfound"></div>
@@ -414,9 +422,17 @@ function reciteClass(st){
   st.querySelectorAll(".chunks button").forEach(b=>b.onclick=()=>{LS.set("reciteCls",b.dataset.k);reciteClass(st)});
   const inp=st.querySelector("#rin");
   inp.onkeydown=e=>{if(e.key!=="Enter")return;const v=inp.value;inp.value="";
-    const hit=matchName(v,names.filter(n=>!found.includes(n)));
     const msg=st.querySelector("#rmsg");
-    if(hit){found.push(hit);grade("m:"+hit,true);msg.textContent="✓ "+hit}
+    const left=names.filter(n=>!found.includes(n));
+    if(fixing){ if(norm(v)===norm(fixing)){found.push(fixing);grade("m:"+fixing,true);msg.textContent="✓ "+fixing;fixing=null}
+      else{msg.textContent="Spell it exactly — type in: "+fixing;inp.placeholder=fixing}
+      st.querySelector("#rc").textContent=`${found.length} / ${names.length}`;
+      st.querySelector("#rfound").innerHTML=found.map(n=>`<span class="pill">${esc(n)}</span>`).join("");
+      if(found.length===names.length){msg.textContent="All of them. Try the next class.";LS.set("reciteBest_"+sel,names.length)}
+      return }
+    const exact=matchNameExact(v,left), hit=exact||matchName(v,left);
+    if(exact){found.push(exact);grade("m:"+exact,true);msg.textContent="✓ "+exact}
+    else if(hit){fixing=hit;grade("m:"+hit,false);msg.textContent="You got it, but wrong spelling — type in: "+hit;inp.placeholder=hit}
     else if(matchName(v,found)){msg.textContent="Already got that one"}
     else{const other=matchName(v,ALL.map(p=>p.name));msg.textContent=other?`${other} is ${ALL.find(p=>p.name===other).cls}, not ${sel}`:"Not a "+sel}
     st.querySelector("#rc").textContent=`${found.length} / ${names.length}`;
@@ -446,15 +462,17 @@ function exec(){
     if(m==="list") st.innerHTML=`<div class="card tablewrap"><table><thead><tr><th>Position</th><th>Brother(s)</th></tr></thead><tbody>${EXEC.map(e=>`<tr><td>${e.pos}</td><td><span class="nm hidecell">${e.people.join(", ")}</span></td></tr>`).join("")}</tbody></table></div><p class="hint" style="margin-top:8px">Tap a cell to reveal.</p>`,
       st.querySelectorAll(".nm").forEach(n=>n.onclick=()=>n.classList.remove("hidecell"));
     if(m==="recite"){
-      st.innerHTML=`<div class="card"><div class="qsub">Fill in every position, then check. Separate multiple people with commas. First names are fine if unique.</div>
+      st.innerHTML=`<div class="card"><div class="qsub">Fill in every position, then check. Separate multiple people with commas. First names are fine if unique. Spelling has to be exact.</div>
       <div style="display:grid;gap:10px">${EXEC.map((e,i)=>`<label style="display:grid;gap:4px"><span style="font-weight:600;font-size:14px">${e.pos}${e.people.length>1?` <span class="hint">(${e.people.length} people)</span>`:""}</span><input type="text" id="ex${i}" autocomplete="off"><span id="exr${i}" class="hint"></span></label>`).join("")}</div>
       <div class="row" style="margin-top:14px"><button class="btn" id="exc">Check</button><button class="btn ghost" id="exx">Clear</button></div><div id="exs"></div></div>`;
       st.querySelector("#exx").onclick=()=>exec();
       st.querySelector("#exc").onclick=()=>{let tot=0,ok=0;
         EXEC.forEach((e,i)=>{const parts=st.querySelector("#ex"+i).value.split(/,|&|\band\b/).map(s=>s.trim()).filter(Boolean);
-          const left=e.people.slice();parts.forEach(p=>{const h=matchName(p,left);if(h)left.splice(left.indexOf(h),1)});
+          const left=e.people.slice(), misspelt=[];
+          parts.forEach(p=>{const ex=matchNameExact(p,left);if(ex){left.splice(left.indexOf(ex),1);return}const h=matchName(p,left);if(h)misspelt.push(h)});
           const good=e.people.length-left.length;tot+=e.people.length;ok+=good;grade("e:"+e.pos,left.length===0);
-          const r=st.querySelector("#exr"+i);r.innerHTML=left.length?`<span style="color:var(--bad)">✗ ${esc(e.people.join(", "))}</span>`:`<span style="color:var(--good)">✓</span>`});
+          const r=st.querySelector("#exr"+i);
+          r.innerHTML=left.length?(misspelt.length?`<span style="color:var(--bad)">You got it, but wrong spelling — type in: ${esc(misspelt.join(", "))}</span>`:`<span style="color:var(--bad)">✗ ${esc(e.people.join(", "))}</span>`):`<span style="color:var(--good)">✓</span>`});
         st.querySelector("#exs").innerHTML=`<div class="feedback ${ok===tot?"good":"bad"}">${ok} / ${tot} names correct.</div>`};
     }
   });
@@ -523,16 +541,19 @@ function memorizer(st,key,text){
     while(a<n||b<m){if(a<n&&b<m&&tn[a]===typed[b]){out.push(`<span class="ok">${esc(target[a])}</span>`);hits++;a++;b++}
       else if(b<m&&(a>=n||D[a][b+1]>=D[a+1][b])){out.push(`<span class="extra">${esc(typed[b])}</span>`);b++}
       else{out.push(`<span class="miss">${esc(target[a])}</span>`);a++}}
-    const extras=m-hits, pct=Math.max(0,Math.round(100*(hits-extras*0.5)/n));
+    const extras=m-hits, exact=hits===n&&extras===0, pct=exact?100:Math.min(99,Math.max(0,Math.round(100*(hits-extras*0.5)/n)));
     const prev=LS.get("mbest_"+key+"_"+chunk,0); if(pct>prev)LS.set("mbest_"+key+"_"+chunk,pct);
-    if(key==="creed") sel.forEach(l=>{const i=lines.indexOf(l);if(i>0)grade("c:"+(i-1),pct>=95)});
-    st.querySelector("#diff").innerHTML=`<div class="feedback ${pct>=95?"good":"bad"}">${pct}% · ${hits}/${n} words${extras?` · ${extras} extra`:""}</div>
+    if(key==="creed") sel.forEach(l=>{const i=lines.indexOf(l);if(i>0)grade("c:"+(i-1),exact)});
+    let slip=""; if(key==="creed"&&!exact){let i=0;while(i<n&&i<m&&tn[i]===typed[i])i++;slip=`<br>First slip at word ${i+1}: expected “<b>${esc(target[i]??"(end)")}</b>”, you typed “${esc(typed[i]??"(nothing)")}”. Try again.`}
+    const okText=key==="creed"?(exact?"Exact. Word for word.":"Not exact — the creed has to be word for word.")+slip:`${pct}% · ${hits}/${n} words${extras?` · ${extras} extra`:""}`;
+    st.querySelector("#diff").innerHTML=`<div class="feedback ${(key==="creed"?exact:pct>=95)?"good":"bad"}">${okText}</div>${key==="creed"&&!exact?`<div class="row" style="margin-top:8px"><button class="btn ghost" id="retry">Try again</button></div>`:""}
     <div class="text diff" style="margin-top:10px">${out.join(" ")}</div>
     <p class="hint"><span style="color:var(--good)">green</span> = right · <span style="color:var(--bad);text-decoration:underline">red</span> = missed · <s>struck</s> = you added it</p>`;
+    const rt=st.querySelector("#retry"); if(rt) rt.onclick=()=>{const ta=st.querySelector("#rt");ta.value="";st.querySelector("#diff").innerHTML="";ta.focus()};
   };
 }
 function creed(){
-  $("#main").innerHTML=`<h2>The Creed</h2><p class="hint">Otis Allan Glazebrook, 1880. Read → Fade → First letters → Recite, always the whole creed. 100% on Recite, typed out in full, is the goal.</p><div id="stage"></div><h3>Quick check</h3><div id="cq"></div>`;
+  $("#main").innerHTML=`<h2>The Creed</h2><p class="hint">Otis Allan Glazebrook, 1880. Read → Fade → First letters → Recite, always the whole creed. Recite is pass/fail: every word, in order, exactly.</p><div id="stage"></div><h3>Quick check</h3><div id="cq"></div>`;
   memorizer($("#stage"),"creed",CREED);
   mcCard($("#cq"),{label:"What comes next?",getQ:l=>pick(["creed"],l)});
 }
