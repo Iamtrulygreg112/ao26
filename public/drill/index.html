@@ -443,7 +443,7 @@ function reciteClass(st){
   let found=[]; let wrong=[]; let fixing=null; // fixing = the full name they must now type exactly
   st.innerHTML=`<div class="chunks">${ORDER.map(n=>`<button data-k="${n}" aria-pressed="${n===sel}">${n} (${CLASSES.find(x=>x.name===n).members.length})</button>`).join("")}</div>
   <div class="card"><div class="q">Name every ${sel}</div><div class="qsub">Type a name and press Enter. First or last name works if it's unique. Spelling has to be exact.</div>
-  <input type="text" id="rin" autocomplete="off" placeholder="e.g. ${esc(names[0].split(" ")[0])}…">
+  <input type="text" id="rin" autocomplete="off" autocapitalize="words" spellcheck="false">
   <div class="meta" style="margin-top:10px"><span id="rc">0 / ${names.length}</span><span id="rmsg"></span></div>
   <div class="pills" id="rfound"></div>
   <div class="row" style="margin-top:14px"><button class="btn ghost" id="rgive">Show the ones I missed</button><button class="btn ghost" id="rreset">Restart</button></div>
@@ -454,14 +454,14 @@ function reciteClass(st){
     const msg=st.querySelector("#rmsg");
     const left=names.filter(n=>!found.includes(n));
     if(fixing){ if(norm(v)===norm(fixing)){found.push(fixing);grade("m:"+fixing,true);msg.textContent="✓ "+fixing;fixing=null}
-      else{msg.textContent="Spell it exactly — type in: "+fixing;inp.placeholder=fixing}
+      else{msg.textContent="Spell it exactly — type in: "+fixing}
       st.querySelector("#rc").textContent=`${found.length} / ${names.length}`;
       st.querySelector("#rfound").innerHTML=found.map(n=>`<span class="pill">${esc(n)}</span>`).join("");
       if(found.length===names.length){msg.textContent="All of them. Try the next class.";LS.set("reciteBest_"+sel,names.length)}
       return }
     const exact=matchNameExact(v,left), hit=exact||matchName(v,left);
     if(exact){found.push(exact);grade("m:"+exact,true);msg.textContent="✓ "+exact}
-    else if(hit){fixing=hit;grade("m:"+hit,false);msg.textContent="You got it, but wrong spelling — type in: "+hit;inp.placeholder=hit}
+    else if(hit){fixing=hit;grade("m:"+hit,false);msg.textContent="You got it, but wrong spelling — type in: "+hit}
     else if(matchName(v,found)){msg.textContent="Already got that one"}
     else{const other=matchName(v,ALL.map(p=>p.name));msg.textContent=other?`${other} is ${ALL.find(p=>p.name===other).cls}, not ${sel}`:"Not a "+sel}
     st.querySelector("#rc").textContent=`${found.length} / ${names.length}`;
