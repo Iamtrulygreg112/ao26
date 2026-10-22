@@ -153,7 +153,7 @@ Luca Oathem|Environmental econ|Lafayette
 Marty Slack|Statistics|Huntington Beach
 Matheus Dabus|Materials Engineering|Miami
 Micah Von dem Busche|Physics|Irvine (OC)
-Sebastian Ter Muelen|Chemical engineering|Seattle
+Sebastian ter Meulen|Chemical engineering|Seattle
 Tristan Gude|Economics|Orange County
 Tucker Kurth|Environmental Econ|Marin
 Will Beesley|Physics|Menlo Park
@@ -182,7 +182,7 @@ Carson Bartley||LA
 Finn Rawley|Econ|New York
 Harlo Cozzens||LA
 Henry Crabtree|Math|LA
-Henry Leavenworth||SF
+Henry Leveanworth||SF
 Jamison Wu||Oklahoma
 Julio Perez||LA
 Justin Tella||LA
@@ -220,7 +220,36 @@ Rishi Sinha|EECS|San Jose
 Rohan Panchal|Economics|Los Altos
 Rory Bushong|Economics|Indiana
 Ryder Dittman|Undecided|Tahoe
-Vishaal Krishan|Business|OC`}
+Vishaal Krishan|Business|OC`},
+ {name:"Kappa", m:`Alex Zhu||
+Alexandre Chiu||
+Dorukhan User||
+Joseph Makram||
+Kaan Kont||
+Leon Jia||
+Louei Btaddini||
+Nicholas Carone||
+Nieco Erasmo||
+Owen Sangiacomo||
+Randy Sanchez Jr.||
+Rayan Sudeora||
+Reuben Ockman||`},
+ {name:"Iota", m:`Adi Iyer||
+Alex Cheng||
+Arda Ozgel||
+Bazil hamad||
+Brandon Aghanatios||
+Eli Hughes||
+Enjl Himoya||
+Gabriel Arzate||
+Isaac Davis||
+Johnny Li||
+Joshua Cheng||
+Oleg Viatkin||
+Owen Buzbee||
+Patrick Yeh||
+Riley Easter||
+Seth Zahner||`}
 ].map(c=>({name:c.name, members:c.m.split("\n").map(l=>{const [n,maj,home]=l.split("|");return {name:n.trim(),major:(maj||"").trim(),home:(home||"").trim(),cls:c.name}})}));
 const ORDER = CLASSES.map(c=>c.name); // newest → oldest
 const ALL = CLASSES.flatMap(c=>c.members);
@@ -228,7 +257,7 @@ const ALL = CLASSES.flatMap(c=>c.members);
 const EXEC = [
  ["President",["Alex Wight"]],["VP",["Rohan Panchal"]],["Secretary",["Elliot Rosin"]],
  ["Brotherhood",["Diego Jimenez"]],["Treasurer",["Alex Stankus"]],
- ["Rush",["Kavi Seidman","Aaron Reimer","Henry Leavenworth"]],["Risk",["Justin Tella","Mason Morris"]],
+ ["Rush",["Kavi Seidman","Aaron Reimer","Henry Leveanworth"]],["Risk",["Justin Tella","Mason Morris"]],
  ["Social",["Henry Crabtree","Nizhoni Deschene","Aaron Rome","Vishaal Krishan"]],["Housing Manager",["Mateo Espinoza"]],
  ["Alumni",["Logan Hardy"]],["New Member Educator",["Armand Khchirian"]],["IFC Coordinator",["Rory Bushong"]],
  ["Social Media",["Phoenix Ho"]],["Retreat",["Brandon Fraser"]],["Philanthropy",["Jamison Wu"]]
@@ -301,7 +330,7 @@ const DECKS = {
    qs.push({id:"gs:"+g.n,prompt:`<span style="font-family:Georgia,serif;font-size:34px">${g.s}</span>`,sub:"Name this letter",options:shuffle([g.n,...sample(GREEK.filter(x=>x!==g),3).map(x=>x.n)]),answer:g.n})});return qs}},
  history:{label:"ATΩ history", build(){return HISTORY.map(h=>({id:"h:"+h.k,prompt:HIST_ID[h.k],options:shuffle([h.a,...h.d]),answer:h.a}))}},
  creed:{label:"Creed — next line", build(){const L=CREED.split("\n");return L.slice(0,-1).map((l,i)=>({id:"c:"+i,prompt:`“…${esc(l)}”`,sub:"What comes next?",options:shuffle([L[i+1],...sample(L.filter((_,j)=>j!==i+1&&j!==i),3)]),answer:L[i+1]}))}},
- order:{label:"Class order", build(){const qs=[];ORDER.forEach((c,i)=>{if(i<4)qs.push({id:"o:"+c,prompt:`Which class came right <b>before</b> ${c} (one older)?`,options:ORDER.filter(x=>x!==c),answer:ORDER[i+1],keepOrder:true})});return qs}},
+ order:{label:"Class order", build(){const qs=[];ORDER.forEach((c,i)=>{if(i<ORDER.length-1)qs.push({id:"o:"+c,prompt:`Which class came right <b>before</b> ${c} (one older)?`,options:ORDER.filter(x=>x!==c),answer:ORDER[i+1],keepOrder:true})});return qs}},
 };
 function pick(deckKeys,last){
   const pool=deckKeys.flatMap(k=>DECKS[k].build());
@@ -366,7 +395,7 @@ function home(){
   <ol class="plan">
     <li><div><b>Today:</b> Greek alphabet speed run until you're under 60s, then Class order. These are the backbone for everything else.</div></li>
     <li><div><b>Thu:</b> The whole Creed. Read → Fade → First letters → Recite until you can type it out in full. Same for the chant and Old Alpha.</div></li>
-    <li><div><b>Fri:</b> Recite each pledge class from memory. Start with Lambda and Mu (smallest), finish with Omicron.</div></li>
+    <li><div><b>Fri:</b> Recite each pledge class from memory. Start with Mu and Kappa (smallest), finish with Omicron.</div></li>
     <li><div><b>Sat:</b> Exec recall + History. Quiz each other out loud: one person reads a position, the other names the brother.</div></li>
     <li><div><b>Sun morning:</b> Two mock midterms. Re-drill anything you missed, then recite the creed and songs once out loud.</div></li>
   </ol>
@@ -400,7 +429,7 @@ function orderDrill(st){
     st.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
       if(b.dataset.c===ORDER[picked.length]){picked.push(b.dataset.c)}else{misses++;b.classList.add("opt","wrong");setTimeout(draw,350);return}
       draw();
-      if(picked.length===5){grade("ord:all",misses===0);st.querySelector("#fb").innerHTML=`<div class="feedback ${misses?"bad":"good"}">${misses?misses+" wrong tap(s). Run it again until it's clean.":"Clean run."}</div><div class="row" style="margin-top:10px"><button class="btn" id="again">Again</button></div>`;st.querySelector("#again").onclick=()=>orderDrill(st)}
+      if(picked.length===ORDER.length){grade("ord:all",misses===0);st.querySelector("#fb").innerHTML=`<div class="feedback ${misses?"bad":"good"}">${misses?misses+" wrong tap(s). Run it again until it's clean.":"Clean run."}</div><div class="row" style="margin-top:10px"><button class="btn" id="again">Again</button></div>`;st.querySelector("#again").onclick=()=>orderDrill(st)}
     });
   }
   draw();
@@ -482,7 +511,7 @@ function exec(){
 function fmt(ms){const s=ms/1000;return s.toFixed(1)+"s"}
 function greek(){
   const M=modes([["speed","Speed run"],["flash","Flashcards"],["chart","Chart"]],"greek","speed");
-  $("#main").innerHTML=`<h2>Greek alphabet</h2><p class="hint">24 letters. Your pledge classes count backward through it: Omicron ← Xi ← Nu ← Mu ← Lambda.</p>`+M.html;
+  $("#main").innerHTML=`<h2>Greek alphabet</h2><p class="hint">24 letters. Your pledge classes count backward through it: ${ORDER.join(" ← ")}.</p>`+M.html;
   M.wire((m,st)=>{
     if(m==="flash") mcCard(st,{label:"Greek",getQ:l=>pick(["greek"],l)});
     if(m==="chart"){st.innerHTML=`<div class="card"><div class="greekgrid">${GREEK.map(g=>`<div class="gl"><div class="s">${g.s}</div><div class="n">${g.n}</div></div>`).join("")}</div></div>`}
