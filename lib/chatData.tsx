@@ -41,6 +41,10 @@ export type ChatMessageDoc = {
   thumbs: number; // distinct mapped non-owner members with a 👍
   likedBy: string[]; // member ids
   notLikedBy: string[]; // member ids
+  /** {memberId: emoji} — each mapped member's current reaction (owner included),
+   *  emoji normalized (no skin tone / variation selector). Absent on docs the bot
+   *  hasn't rewritten yet. */
+  reactedBy?: Record<string, string>;
   unmappedReactors: number;
   ownerReacted: boolean;
   autoThumbed: boolean;
@@ -54,11 +58,13 @@ export type LikeRequestDoc = {
   messageId: string;
   memberId: string;
   requestedBy: string;
+  /** The reaction to send. Absent = 👍 (requests from before any-emoji). */
+  emoji?: string;
   status: LikeRequestStatus;
   createdAt: string;
   sentAt?: string;
   note?: string; // dry_run
-  reason?: string; // skipped: "already reacted" | "not linked" | "unknown message" | "group not enabled"
+  reason?: string; // skipped: "already reacted" | "not linked" | "unknown message" | "group not enabled" | "invalid emoji"
   error?: string; // failed
 };
 export type LikeRequestRow = WithId<LikeRequestDoc>;

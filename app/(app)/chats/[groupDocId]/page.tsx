@@ -61,6 +61,7 @@ function Thread({ groupDocId, owner }: { groupDocId: string; owner: boolean }) {
   const [atBottom, setAtBottom] = useState(true);
   const [unseen, setUnseen] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [openEmoji, setOpenEmoji] = useState<string | undefined>(undefined);
   const lastCount = useRef(0);
   const lastNewestId = useRef<string | null>(null);
   const prependState = useRef<{ height: number; top: number } | null>(null);
@@ -154,7 +155,10 @@ function Thread({ groupDocId, owner }: { groupDocId: string; owner: boolean }) {
                   <span className="rounded-full bg-surface px-3 py-1 text-[11px] font-medium text-muted">{it.label}</span>
                 </div>
               ) : (
-                <ChatBubble key={it.key} m={it.m} showName={it.showName} mine={!!me && it.m.authorMemberId === me} onOpen={(m) => setOpenId(m.id)} />
+                <ChatBubble key={it.key} m={it.m} showName={it.showName} mine={!!me && it.m.authorMemberId === me} onOpen={(m, emoji) => {
+                    setOpenId(m.id);
+                    setOpenEmoji(emoji);
+                  }} />
               ),
             )}
           </>
@@ -173,7 +177,7 @@ function Thread({ groupDocId, owner }: { groupDocId: string; owner: boolean }) {
         </div>
       )}
 
-      {openMessage && <ReactSheet m={openMessage} me={me} linked={accounts} onClose={() => setOpenId(null)} />}
+      {openMessage && <ReactSheet key={`${openMessage.id}:${openEmoji ?? ""}`} m={openMessage} me={me} linked={accounts} initialEmoji={openEmoji} onClose={() => setOpenId(null)} />}
     </div>
   );
 }

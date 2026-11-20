@@ -24,7 +24,8 @@ type Props = {
   /** True when this is the first bubble of a run from the same author. */
   showName: boolean;
   mine: boolean;
-  onOpen: (m: ChatMessageRow) => void;
+  /** Opens the react sheet; `emoji` preselects a reaction (a tapped pill). */
+  onOpen: (m: ChatMessageRow, emoji?: string) => void;
 };
 
 export default function ChatBubble({ m, showName, mine, onOpen }: Props) {
@@ -68,8 +69,8 @@ export default function ChatBubble({ m, showName, mine, onOpen }: Props) {
                 <button
                   key={emoji}
                   type="button"
-                  onClick={() => onOpen(m)}
-                  aria-label={`${emoji} ${n}${thumbs ? ", react as someone" : ""}`}
+                  onClick={() => onOpen(m, emoji)}
+                  aria-label={`${emoji} ${n}, react as someone`}
                   className={`inline-flex h-6 items-center gap-1 rounded-full border px-2 text-[11px] font-medium tabular-nums transition active:scale-[0.97] ${
                     thumbs && n >= GOLD_AT ? "border-gold/50 bg-gold/15 text-gold" : "border-border bg-surface text-text"
                   }`}

@@ -9,7 +9,14 @@ import {
   type ChatMessageRow,
   type LikeRequestRow,
 } from "@/lib/chatData";
-import { requestLike, requestLikes } from "@/lib/likeWrites";
+import {
+  THUMB,
+  isSingleEmoji,
+  normalizeEmoji,
+  withPresentation,
+  requestLike,
+  requestLikes,
+} from "@/lib/likeWrites";
 import { errorText } from "@/lib/writes";
 import { GOLD_AT } from "./ChatBubble";
 import ConfirmDialog from "./ConfirmDialog";
@@ -17,6 +24,8 @@ import Spinner from "./Spinner";
 
 const OFFLINE_AFTER_MS = 3 * 60 * 1000;
 const CONFIRM_ABOVE = 5;
+/** Signal's default reaction bar, plus a few the chats actually use. */
+const QUICK = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "💀"];
 
 type Option = "pick" | null;
 
@@ -79,14 +88,102 @@ function Row({
 }
 
 type Props = {
-  /** The live message row — the sheet re-renders as likedBy changes. */
+  /** The live message row — the sheet re-renders as reactions change. */
   m: ChatMessageRow;
   me: string;
   linked: Map<string, LinkedAccountRow>;
+  /** Preselected reaction (e.g. the pill that was tapped). Defaults to 👍. */
+  initialEmoji?: string;
   onClose: () => void;
 };
 
-/** "React 👍 as…" — bottom sheet on phones, centered panel on wider screens. */
+/** Each mapped member's current reaction (normalized), falling back to likedBy
+ *  on docs the bot hasn't rewritten with reactedBy yet. */
+function currentReactions(m: ChatMessageRow): Map<string, string> {
+  if (m.reactedBy) return new Map(Object.entries(m.reactedBy));
+  return new Map((m.likedBy ?? []).map((id) => [id, THUMB]));
+}
+
+/** Emoji picker: quick row, the message's other reactions, and a free-entry field. */
+function EmojiPicker({
+  value,
+  extra,
+  onChange,
+}: {
+  value: string;
+  extra: string[];
+  onChange: (e: string) => void;
+}) {
+  const [custom, setCustom] = useState(false);
+  const [draft, setDraft] = useState("");
+  const options = [...QUICK];
+  for (const e of [...extra, value]) {
+    if (!options.some((o) => normalizeEmoji(o) === normalizeEmoji(e))) options.push(e);
+  }
+  const draftOk = isSingleEmoji(draft.trim());
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Reaction">
+        {options.map((e) => {
+          const on = normalizeEmoji(e) === normalizeEmoji(value);
+          return (
+            <button
+              key={e}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => onChange(e)}
+              className={`flex h-10 w-10 items-center justify-center rounded-full text-xl transition active:scale-95 ${
+                on ? "bg-azure/20 ring-2 ring-azure" : "bg-surface2 hover:bg-border"
+              }`}
+            >
+              {e}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setCustom((c) => !c)}
+          aria-expanded={custom}
+          aria-label="Other emoji"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-surface2 text-lg text-muted transition hover:bg-border active:scale-95"
+        >
+          +
+        </button>
+      </div>
+      {custom && (
+        <form
+          className="flex gap-2"
+          onSubmit={(ev) => {
+            ev.preventDefault();
+            if (!draftOk) return;
+            onChange(draft.trim());
+            setDraft("");
+            setCustom(false);
+          }}
+        >
+          <input
+            autoFocus
+            value={draft}
+            onChange={(ev) => setDraft(ev.target.value)}
+            placeholder="Type or paste one emoji"
+            aria-label="Any emoji"
+            className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-bg px-3 text-base"
+          />
+          <button
+            type="submit"
+            disabled={!draftOk}
+            className="h-10 rounded-xl bg-azure px-4 text-sm font-medium text-white transition active:scale-[0.98] disabled:opacity-50"
+          >
+            Use
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/** "React as…" — bottom sheet on phones, centered panel on wider screens. */
 function useNow(intervalMs: number): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -96,7 +193,7 @@ function useNow(intervalMs: number): number {
   return now;
 }
 
-export default function ReactSheet({ m, me, linked, onClose }: Props) {
+export default function ReactSheet({ m, me, linked, initialEmoji, onClose }: Props) {
   const { status, loaded: botLoaded } = useSignalData();
   const now = useNow(15_000);
   const { requests } = useLikeRequestsFor(m.id);
@@ -105,6 +202,7 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emoji, setEmoji] = useState(() => withPresentation(initialEmoji ?? THUMB));
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -114,10 +212,25 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const likedBy = useMemo(() => new Set(m.likedBy ?? []), [m.likedBy]);
-  const notLiked = useMemo(() => new Set(m.notLikedBy ?? []), [m.notLikedBy]);
-  const thumbs = m.reactions?.["👍"] ?? m.thumbs;
+  const target = normalizeEmoji(emoji);
+  const current = useMemo(() => currentReactions(m), [m]);
+  // Mapped pledges (owner excluded) — the people the bot can tell apart.
+  const mapped = useMemo(
+    () => new Set([...(m.likedBy ?? []), ...(m.notLikedBy ?? [])]),
+    [m.likedBy, m.notLikedBy],
+  );
+  const hasTarget = (id: string) => current.get(id) === target;
+  const count =
+    target === THUMB
+      ? (m.reactions?.[THUMB] ?? m.thumbs)
+      : (m.reactions?.[target] ?? 0);
+  const havent = [...mapped].filter((id) => !current.has(id)).length;
+  const otherEmojis = Object.keys(m.reactions ?? {}).filter(
+    (e) => (m.reactions?.[e] ?? 0) > 0,
+  );
   const isLinkedId = (id: string) => isLinked(linked.get(id));
+  const pendingFor = (id: string) =>
+    requests.some((r) => r.memberId === id && r.status === "pending");
 
   const lastSeen = status ? new Date(status.lastSeen).getTime() : NaN;
   const online = Number.isFinite(lastSeen) && now - lastSeen < OFFLINE_AFTER_MS;
@@ -131,13 +244,14 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
 
   // "Me"
   const myLatest = requests.find((r) => r.memberId === me) ?? null;
-  const meLiked = likedBy.has(me);
+  const meHas = hasTarget(me);
+  const myCurrent = current.get(me);
   const meLinked = isLinkedId(me);
   const meDisabledWhy =
     me === OWNER_ID
       ? "The Pi is your account"
-      : meLiked
-        ? "Already liked"
+      : meHas
+        ? `Already ${emoji}`
         : !meLinked
           ? "Not linked"
           : myLatest?.status === "pending"
@@ -145,20 +259,19 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
             : null;
 
   // "Pick people"
+  // Anyone linked who doesn't already have THIS emoji (another reaction gets replaced).
   const selectable = TRACKED_MEMBERS.filter(
-    (x) => !likedBy.has(x.id) && isLinkedId(x.id),
+    (x) => !hasTarget(x.id) && isLinkedId(x.id),
   );
   const selectedIds = [...picked].filter((id) =>
     selectable.some((x) => x.id === id),
   );
+  const replacing = selectedIds.filter((id) => current.has(id));
   const pickPending = requests.filter((r) => r.status === "pending").length;
-  // Linked members who haven't reacted (and aren't mid-request) — what "Select all" checks.
+  // Linked members with no reaction at all (and not mid-request) — what "Select all" checks.
+  // Never sweeps up someone's existing reaction; pick those one by one.
   const allWhoHavent = selectable
-    .filter(
-      (x) =>
-        notLiked.has(x.id) &&
-        !requests.some((r) => r.memberId === x.id && r.status === "pending"),
-    )
+    .filter((x) => mapped.has(x.id) && !current.has(x.id) && !pendingFor(x.id))
     .map((x) => x.id);
   const allSelected =
     allWhoHavent.length > 0 && allWhoHavent.every((id) => picked.has(id));
@@ -167,7 +280,7 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await requestLike(m.id, me, me);
+      await requestLike(m.id, me, me, emoji);
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -179,7 +292,7 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await requestLikes(m.id, selectedIds, me);
+      await requestLikes(m.id, selectedIds, me, emoji);
       setPicked(new Set());
     } catch (err) {
       setError(errorText(err));
@@ -212,7 +325,7 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
                 id="react-title"
                 className="text-base font-semibold tracking-tight"
               >
-                React 👍 as…
+                React {emoji} as…
               </h2>
               <button
                 type="button"
@@ -229,12 +342,14 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
             <p className="text-xs tabular-nums text-muted">
               <span
                 className={
-                  thumbs >= GOLD_AT ? "font-medium text-gold" : "text-text"
+                  target === THUMB && count >= GOLD_AT
+                    ? "font-medium text-gold"
+                    : "text-text"
                 }
               >
-                👍 {thumbs}
+                {emoji} {count}
               </span>{" "}
-              · {m.notLikedBy?.length ?? 0} haven&apos;t
+              · {havent} haven&apos;t reacted
             </p>
             {banner && (
               <p className="rounded-lg bg-gold/10 px-3 py-1.5 text-xs text-gold">
@@ -244,6 +359,14 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
           </div>
 
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-4">
+            <div className="px-1 pb-1">
+              <EmojiPicker
+                value={emoji}
+                extra={otherEmojis}
+                onChange={(e) => setEmoji(withPresentation(e))}
+              />
+            </div>
+
             {/* Me */}
             <Row
               label="Me"
@@ -251,13 +374,16 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
                 myLatest &&
                 (myLatest.status === "pending" || myLatest.status === "sent")
                   ? likeStatusText(myLatest)
-                  : (meDisabledWhy ?? `as ${memberName(me)}`)
+                  : (meDisabledWhy ??
+                    (myCurrent
+                      ? `replaces your ${myCurrent}`
+                      : `as ${memberName(me)}`))
               }
               disabled={busy || meDisabledWhy !== null}
               onClick={likeMe}
             />
             {myLatest &&
-              !meLiked &&
+              !meHas &&
               myLatest.status !== "pending" &&
               myLatest.status !== "sent" && (
                 <p className="px-4 text-xs text-muted">
@@ -297,20 +423,18 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
                 </div>
                 <ul className="flex flex-wrap gap-1.5" aria-label="People">
                   {TRACKED_MEMBERS.map((x) => {
-                    const liked = likedBy.has(x.id);
+                    const theirs = current.get(x.id);
                     const isLinkedX = isLinkedId(x.id);
                     const sel = picked.has(x.id);
-                    const pending = requests.some(
-                      (r) => r.memberId === x.id && r.status === "pending",
-                    );
-                    if (liked) {
+                    const pending = pendingFor(x.id);
+                    if (theirs === target) {
                       return (
                         <li
                           key={x.id}
                           className="inline-flex h-8 items-center gap-1 rounded-full bg-surface2 px-3 text-xs font-medium text-text"
-                          aria-label={`${x.name} liked`}
+                          aria-label={`${x.name} reacted ${emoji}`}
                         >
-                          {x.name} <span className="text-green-500">✓</span>
+                          {x.name} <span aria-hidden>{emoji}</span>
                         </li>
                       );
                     }
@@ -320,9 +444,10 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
                           key={x.id}
                           className="inline-flex h-8 items-center rounded-full border border-dashed border-border px-3 text-xs text-muted opacity-60"
                           title="not linked"
-                          aria-label={`${x.name} not linked`}
+                          aria-label={`${x.name} not linked${theirs ? `, reacted ${theirs}` : ""}`}
                         >
                           {x.name}
+                          {theirs && <span className="ml-1" aria-hidden>{theirs}</span>}
                         </li>
                       );
                     }
@@ -331,6 +456,7 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
                         <button
                           type="button"
                           aria-pressed={sel}
+                          aria-label={`${x.name}${theirs ? `, currently ${theirs}` : ""}`}
                           disabled={pending}
                           onClick={() =>
                             setPicked((prev) => {
@@ -348,6 +474,11 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
                         >
                           {pending && <Spinner className="h-3 w-3" />}
                           {x.name}
+                          {theirs && (
+                            <span className="opacity-70" aria-hidden>
+                              {theirs}
+                            </span>
+                          )}
                         </button>
                       </li>
                     );
@@ -363,12 +494,18 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
                   }
                   className="h-11 w-full rounded-xl bg-azure px-4 text-sm font-medium text-white transition active:scale-[0.98] disabled:opacity-50"
                 >
-                  {`Like as ${selectedIds.length} ${selectedIds.length === 1 ? "person" : "people"}`}
+                  {`React ${emoji} as ${selectedIds.length} ${selectedIds.length === 1 ? "person" : "people"}`}
                 </button>
+                {replacing.length > 0 && (
+                  <p className="px-1 text-xs text-muted">
+                    Replaces the current reaction of{" "}
+                    {replacing.map((id) => memberName(id)).join(", ")}.
+                  </p>
+                )}
                 {pickPending > 0 && (
                   <p className="flex items-center gap-2 text-xs text-muted">
                     <Spinner className="h-3 w-3" /> {pickPending} sending… chips
-                    flip as each 👍 lands.
+                    flip as each reaction lands.
                   </p>
                 )}
               </div>
@@ -381,9 +518,13 @@ export default function ReactSheet({ m, me, linked, onClose }: Props) {
       {/* A sibling of the backdrop, so its taps never bubble into onClose. */}
       {confirming && (
         <ConfirmDialog
-          title={`Like as ${selectedIds.length} people?`}
-          body={`A 👍 will go out from each of their linked Signal accounts, a few seconds apart. There is no undo.`}
-          confirmLabel={`Like as ${selectedIds.length}`}
+          title={`React ${emoji} as ${selectedIds.length} people?`}
+          body={`A ${emoji} will go out from each of their linked Signal accounts, a few seconds apart${
+            replacing.length > 0
+              ? `, replacing the current reaction of ${replacing.length}`
+              : ""
+          }. There is no undo.`}
+          confirmLabel={`React as ${selectedIds.length}`}
           onConfirm={likePicked}
           onClose={() => setConfirming(false)}
         />

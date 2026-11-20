@@ -71,12 +71,14 @@ service cloud.firestore {
     match /linked_accounts/{id} { allow read: if true; allow write: if false; }
     // ---- Chats: reactions as linked pledges ---------------------------------------
     // owner_messages mirrors the owner's other groups: only his Google account
-    // may read it. The site only CREATES like_requests; the bot owns every
-    // transition after that. No un-react.
+    // may read it. The site only CREATES like_requests (any single emoji; the
+    // bot re-validates it); the bot owns every transition after that. No un-react.
     match /owner_messages/{id} { allow read: if isOwner(); allow write: if false; }
     match /like_requests/{id} {
       allow read: if true;
-      allow create: if request.resource.data.status == 'pending' && request.resource.data.messageId is string && request.resource.data.memberId is string && request.resource.data.requestedBy is string;
+      allow create: if request.resource.data.status == 'pending' && request.resource.data.messageId is string && request.resource.data.memberId is string && request.resource.data.requestedBy is string
+        && request.resource.data.keys().hasOnly(['messageId','memberId','requestedBy','status','createdAt','emoji'])
+        && (!('emoji' in request.resource.data) || (request.resource.data.emoji is string && request.resource.data.emoji.size() > 0 && request.resource.data.emoji.size() <= 32));
       allow update, delete: if false;
     }
     // ---- Pledge drill scoreboard ---------------------------------------------------
